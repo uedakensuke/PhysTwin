@@ -9,7 +9,7 @@ parser = ArgumentParser()
 parser.add_argument(
     "--base_path",
     type=str,
-    default="/home/hanxiao/Desktop/Research/proj-qqtt/proj-QQTT/data/different_types",
+    default="./data/different_types",
 )
 parser.add_argument("--case_name", type=str, required=True)
 # The category of the object used for segmentation
@@ -36,19 +36,16 @@ logger = None
 
 
 def setup_logger(log_file="timer.log"):
-    global logger  # 声明全局变量
+    global logger 
 
     if logger is None:
         logger = logging.getLogger("GlobalLogger")
         logger.setLevel(logging.INFO)
 
-        # 避免重复添加 handler
         if not logger.handlers:
-            # 创建文件 handler
             file_handler = logging.FileHandler(log_file)
             file_handler.setFormatter(logging.Formatter("%(asctime)s - %(message)s"))
 
-            # 创建终端 handler
             console_handler = logging.StreamHandler()
             console_handler.setFormatter(logging.Formatter("%(message)s"))
 

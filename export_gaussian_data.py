@@ -5,8 +5,8 @@ import pickle
 import numpy as np
 import open3d as o3d
 
-base_path = "/home/hanxiao/Desktop/Research/proj-qqtt/proj-QQTT/data/different_types"
-output_path = "/home/hanxiao/Desktop/Research/proj-qqtt/proj-QQTT/data/gaussian_data"
+base_path = "./data/different_types"
+output_path = "./data/gaussian_data"
 CONTROLLER_NAME = "hand"
 
 

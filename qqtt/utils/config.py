@@ -45,7 +45,6 @@ class Config:
         # Attribute for the real
         self.chamfer_weight = 1.0
         self.track_weight = 1.0
-        self.acc_weight = 0.01
 
         # Other parameters for visualization
         self.overlay_path = None

@@ -2,8 +2,8 @@ import os
 import csv
 import json
 
-base_path = "/home/hanxiao/Desktop/Research/proj-qqtt/proj-QQTT/data/different_types"
-output_path = "/home/hanxiao/Desktop/Research/proj-qqtt/proj-QQTT/data/render_eval_data"
+base_path = "./data/different_types"
+output_path = "./data/render_eval_data"
 CONTROLLER_NAME = "hand"
 
 

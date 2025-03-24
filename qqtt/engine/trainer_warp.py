@@ -2,7 +2,6 @@ from qqtt.data import RealData, SimpleData
 from qqtt.utils import logger, visualize_pc, cfg
 from qqtt.model.diff_simulator import (
     SpringMassSystemWarp,
-    SpringMassSystemWarpAccelerate,
 )
 import open3d as o3d
 import numpy as np
@@ -315,12 +314,9 @@ class InvPhyTrainerWarp:
             if cfg.data_type == "real":
                 total_chamfer_loss = 0.0
                 total_track_loss = 0.0
-                # total_acc_loss = 0.0
             self.simulator.set_init_state(
                 self.simulator.wp_init_vertices, self.simulator.wp_init_velocities
             )
-            # if cfg.data_type == "real":
-            #     self.simulator.set_acc_count(False)
             with wp.ScopedTimer("backward"):
                 for j in tqdm(range(1, cfg.train_frame)):
                     self.simulator.set_controller_target(j)
@@ -353,22 +349,6 @@ class InvPhyTrainerWarp:
                         total_chamfer_loss += chamfer_loss.item()
                         total_track_loss += track_loss.item()
 
-                        # if (
-                        #     wp.to_torch(self.simulator.acc_count, requires_grad=False)[
-                        #         0
-                        #     ]
-                        #     == 1
-                        # ):
-                        #     acc_loss = wp.to_torch(
-                        #         self.simulator.acc_loss, requires_grad=False
-                        #     )
-                        #     total_acc_loss += acc_loss.item()
-                        # else:
-                        #     self.simulator.set_acc_count(True)
-
-                        # # Update the prev_acc used to calculate the acceleration loss
-                        # self.simulator.update_acc()
-
                     loss = wp.to_torch(self.simulator.loss, requires_grad=False)
                     total_loss += loss.item()
 
@@ -389,7 +369,6 @@ class InvPhyTrainerWarp:
             if cfg.data_type == "real":
                 total_chamfer_loss /= cfg.train_frame - 1
                 total_track_loss /= cfg.train_frame - 1
-                # total_acc_loss /= cfg.train_frame - 2
             wandb.log(
                 {
                     "loss": total_loss,
@@ -397,7 +376,6 @@ class InvPhyTrainerWarp:
                         total_chamfer_loss if cfg.data_type == "real" else 0
                     ),
                     "track_loss": total_track_loss if cfg.data_type == "real" else 0,
-                    # "acc_loss": total_acc_loss if cfg.data_type == "real" else 0,
                     "collide_else": wp.to_torch(
                         self.simulator.wp_collide_elas, requires_grad=False
                     ).item(),
@@ -1430,8 +1408,6 @@ def get_simple_shadow(
     light_point=[0, 0, -3],
 ):
     points = points.cpu().numpy()
-    # points_on_table = copy.deepcopy(points)
-    # points_on_table[:, 2] = 0
 
     t = -points[:, 2] / light_point[2]
     points_on_table = points + t[:, None] * light_point
@@ -1463,7 +1439,6 @@ def get_simple_shadow(
     dilated_shadow = cv2.dilate(shadow_image, kernel, iterations=1)
     dilated_shadow = cv2.dilate(dilated_shadow, kernel_1, iterations=1)
     final_shadow = cv2.erode(dilated_shadow, kernel, iterations=1)
-    # final_shadow = cv2.GaussianBlur(shadow_image, (kernel_size, kernel_size), sigmaX=0)
 
     final_shadow[image_mask] = 0
     final_shadow = final_shadow == 255
