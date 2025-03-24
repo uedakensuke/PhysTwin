@@ -5,9 +5,9 @@ import json
 import numpy as np
 from scipy.spatial import KDTree
 
-base_path = "/home/hanxiao/Desktop/Research/proj-qqtt/proj-QQTT/data/different_types"
-prediction_path = "past_exps/only_second"
-output_file = "results/final_track_only_second.csv"
+base_path = "./data/different_types"
+prediction_path = "experiments"
+output_file = "results/final_track.csv"
 
 
 def evaluate_prediction(start_frame, end_frame, vertices, gt_track_3d, idx, mask):

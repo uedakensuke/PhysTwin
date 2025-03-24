@@ -449,75 +449,13 @@ def compute_track_loss(
 def set_int(input: int, output: wp.array(dtype=wp.int32)):
     output[0] = input
 
-
-@wp.kernel(enable_backward=False)
-def update_acc(
-    v1: wp.array(dtype=wp.vec3),
-    v2: wp.array(dtype=wp.vec3),
-    prev_acc: wp.array(dtype=wp.vec3),
-):
-    tid = wp.tid()
-    prev_acc[tid] = v2[tid] - v1[tid]
-
-
-@wp.kernel
-def compute_acc_loss(
-    v1: wp.array(dtype=wp.vec3),
-    v2: wp.array(dtype=wp.vec3),
-    prev_acc: wp.array(dtype=wp.vec3),
-    num_object_points: int,
-    acc_count: wp.array(dtype=wp.int32),
-    acc_weight: float,
-    acc_loss: wp.array(dtype=wp.float32),
-):
-    if acc_count[0] == 1:
-        # Calculate the smooth l1 loss modifed from fvcore.nn.smooth_l1_loss
-        tid = wp.tid()
-        cur_acc = v2[tid] - v1[tid]
-        cur_x = cur_acc[0]
-        cur_y = cur_acc[1]
-        cur_z = cur_acc[2]
-
-        prev_x = prev_acc[tid][0]
-        prev_y = prev_acc[tid][1]
-        prev_z = prev_acc[tid][2]
-
-        dist_x = wp.abs(cur_x - prev_x)
-        dist_y = wp.abs(cur_y - prev_y)
-        dist_z = wp.abs(cur_z - prev_z)
-
-        if dist_x < 1.0:
-            temp_acc_loss_x = 0.5 * (dist_x**2.0)
-        else:
-            temp_acc_loss_x = dist_x - 0.5
-
-        if dist_y < 1.0:
-            temp_acc_loss_y = 0.5 * (dist_y**2.0)
-        else:
-            temp_acc_loss_y = dist_y - 0.5
-
-        if dist_z < 1.0:
-            temp_acc_loss_z = 0.5 * (dist_z**2.0)
-        else:
-            temp_acc_loss_z = dist_z - 0.5
-
-        temp_acc_loss = temp_acc_loss_x + temp_acc_loss_y + temp_acc_loss_z
-
-        average_factor = float(num_object_points) * 3.0
-
-        final_acc_loss = acc_weight * temp_acc_loss / average_factor
-
-        wp.atomic_add(acc_loss, 0, final_acc_loss)
-
-
 @wp.kernel
 def compute_final_loss(
     chamfer_loss: wp.array(dtype=wp.float32),
     track_loss: wp.array(dtype=wp.float32),
-    acc_loss: wp.array(dtype=wp.float32),
     loss: wp.array(dtype=wp.float32),
 ):
-    loss[0] = chamfer_loss[0] + track_loss[0] + acc_loss[0]
+    loss[0] = chamfer_loss[0] + track_loss[0]
 
 
 @wp.kernel
@@ -722,7 +660,6 @@ class SpringMassSystemWarp:
 
             self.chamfer_loss = wp.zeros(1, dtype=wp.float32, requires_grad=True)
             self.track_loss = wp.zeros(1, dtype=wp.float32, requires_grad=True)
-            self.acc_loss = wp.zeros(1, dtype=wp.float32, requires_grad=True)
         self.loss = wp.zeros(1, dtype=wp.float32, requires_grad=True)
 
         # Initialize the warp parameters
@@ -900,29 +837,6 @@ class SpringMassSystemWarp:
                 outputs=[self.wp_states[0].wp_v],
             )
 
-    def set_acc_count(self, acc_count):
-        if acc_count:
-            input = 1
-        else:
-            input = 0
-        wp.launch(
-            set_int,
-            dim=1,
-            inputs=[input],
-            outputs=[self.acc_count],
-        )
-
-    def update_acc(self):
-        wp.launch(
-            update_acc,
-            dim=self.num_object_points,
-            inputs=[
-                wp.clone(self.wp_states[0].wp_v, requires_grad=False),
-                wp.clone(self.wp_states[-1].wp_v, requires_grad=False),
-            ],
-            outputs=[self.prev_acc],
-        )
-
     def update_collision_graph(self):
         assert self.object_collision_flag
         self.collision_grid.build(self.wp_states[0].wp_x, self.collision_dist * 5.0)
@@ -1080,23 +994,9 @@ class SpringMassSystemWarp:
         )
 
         wp.launch(
-            compute_acc_loss,
-            dim=self.num_object_points,
-            inputs=[
-                self.wp_states[0].wp_v,
-                self.wp_states[-1].wp_v,
-                self.prev_acc,
-                self.num_object_points,
-                self.acc_count,
-                cfg.acc_weight,
-            ],
-            outputs=[self.acc_loss],
-        )
-
-        wp.launch(
             compute_final_loss,
             dim=1,
-            inputs=[self.chamfer_loss, self.track_loss, self.acc_loss],
+            inputs=[self.chamfer_loss, self.track_loss],
             outputs=[self.loss],
         )
 
@@ -1118,7 +1018,6 @@ class SpringMassSystemWarp:
             self.neigh_indices.zero_()
             self.chamfer_loss.zero_()
             self.track_loss.zero_()
-            self.acc_loss.zero_()
         self.loss.zero_()
 
     # Functions used to load the parmeters

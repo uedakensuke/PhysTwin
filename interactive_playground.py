@@ -30,17 +30,17 @@ if __name__ == "__main__":
     parser.add_argument(
         "--base_path",
         type=str,
-        default="/home/hanxiao/Desktop/Research/proj-qqtt/proj-QQTT/data/different_types",
+        default="./data/different_types",
     )
     parser.add_argument(
         "--gaussian_path",
         type=str,
-        default="/home/hanxiao/Desktop/Research/proj-qqtt/proj-QQTT/gaussian_splatting/output",
+        default="./gaussian_output",
     )
     parser.add_argument(
         "--bg_img_path",
         type=str,
-        default="/home/hanxiao/Desktop/Research/proj-qqtt/proj-QQTT/past_data_collect/bg/color/0/204.png",
+        default="./data/bg.png",
     )
     parser.add_argument("--case_name", type=str, default="double_lift_cloth_3")
     parser.add_argument("--n_ctrl_parts", type=int, default=2)
@@ -57,10 +57,10 @@ if __name__ == "__main__":
     else:
         cfg.load_from_yaml("configs/real.yaml")
 
-    base_dir = f"temp_experiments/{case_name}"
+    base_dir = f"./temp_experiments/{case_name}"
 
     # Read the first-satage optimized parameters to set the indifferentiable parameters
-    optimal_path = f"experiments_optimization/{case_name}/optimal_params.pkl"
+    optimal_path = f"./experiments_optimization/{case_name}/optimal_params.pkl"
     logger.info(f"Load optimal parameters from: {optimal_path}")
     assert os.path.exists(
         optimal_path

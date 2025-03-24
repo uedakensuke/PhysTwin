@@ -4,9 +4,7 @@ import numpy as np
 import cv2
 
 base_path = "./data/different_types"
-# prediction_dir = "/home/hanxiao/Desktop/Research/proj-qqtt/proj-QQTT/exp_results/indomain_our/output_dynamic"
-# prediction_dir = "/home/hanxiao/Desktop/Research/proj-qqtt/proj-QQTT/exp_results/GNN_render/output_dynamic_gnn"
-prediction_dir = "./gaussian_splatting/output_dynamic"
+prediction_dir = "./gaussian_output_dynamic"
 human_mask_path = (
     "./data/different_types_human_mask"
 )
