@@ -364,6 +364,9 @@ class OptimizerCMA:
                 wp.to_torch(self.simulator.wp_states[0].wp_x, requires_grad=False).cpu()
             ]
 
+        if cfg.data_type == "real":
+            self.simulator.set_acc_count(False)
+
         total_loss = 0.0
         if not visualize:
             # Only optimize on the train frames
@@ -391,6 +394,13 @@ class OptimizerCMA:
             if visualize == True:
                 x = wp.to_torch(self.simulator.wp_states[-1].wp_x, requires_grad=False)
                 vertices.append(x.cpu())
+
+            if cfg.data_type == "real":
+                if wp.to_torch(self.simulator.acc_count, requires_grad=False)[0] == 0:
+                    self.simulator.set_acc_count(True)
+
+                # Update the prev_acc used to calculate the acceleration loss
+                self.simulator.update_acc()
 
             loss = wp.to_torch(self.simulator.loss, requires_grad=False)
             total_loss += loss.item()

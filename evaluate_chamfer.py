@@ -4,14 +4,15 @@ import json
 import torch
 import csv
 import numpy as np
+import os
 from pytorch3d.loss import chamfer_distance
 
-prediction_dir = (
-    "./experiments"
-)
+prediction_dir = "./experiments"
 base_path = "./data/different_types"
 output_file = "results/final_results.csv"
 
+if not os.path.exists("results"):
+    os.makedirs("results")
 
 def evaluate_prediction(
     start_frame,
@@ -24,7 +25,6 @@ def evaluate_prediction(
     num_surface_points,
 ):
     chamfer_errors = []
-    track_errors = []
 
     if not isinstance(vertices, torch.Tensor):
         vertices = torch.tensor(vertices, dtype=torch.float32)
@@ -53,21 +53,13 @@ def evaluate_prediction(
             norm=1,  # Get the L1 distance
         )[0]
 
-        # Compute the tracking loss for the object points
-        gt_track_points = current_object_points[current_object_motions_valid]
-        pred_x = x[:num_original_points][current_object_motions_valid]
-        track_error = torch.mean(((pred_x - gt_track_points) ** 2).sum(-1) ** 0.5)
-
         chamfer_errors.append(chamfer_error.item())
-        track_errors.append(track_error.item())
 
     chamfer_errors = np.array(chamfer_errors)
-    track_errors = np.array(track_errors)
 
     results = {
         "frame_len": len(chamfer_errors),
         "chamfer_error": np.mean(chamfer_errors),
-        "track_error": np.mean(track_errors),
     }
 
     return results
@@ -82,16 +74,14 @@ if __name__ == "__main__":
             "Case Name",
             "Train Frame Num",
             "Train Chamfer Error",
-            "Train Track Error",
             "Test Frame Num",
             "Test Chamfer Error",
-            "Test Track Error",
         ]
     )
 
     dir_names = glob.glob(f"{prediction_dir}/*")
     for dir_name in dir_names:
-        case_name = dir_name.split("/")[-1].split("-")[1]
+        case_name = dir_name.split("/")[-1]
         print(f"Processing {case_name}")
 
         # Read the trajectory data
@@ -145,10 +135,8 @@ if __name__ == "__main__":
                 case_name,
                 results_train["frame_len"],
                 results_train["chamfer_error"],
-                results_train["track_error"],
                 results_test["frame_len"],
                 results_test["chamfer_error"],
-                results_test["track_error"],
             ]
         )
     file.close()
