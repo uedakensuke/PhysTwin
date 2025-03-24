@@ -55,7 +55,7 @@ Download the original data, processed data, and results into the project's root 
 ### Play with the Interactive Playground
 Use the previously constructed PhysTwin to explore the interactive playground. Users can interact with the pre-built PhysTwin using keyboard. The next section will provide a detailed guide on how to construct the PhysTwin from the original data.
 
-TODO: add a video here
+![example](./assets/sloth.gif)
 
 Run the interactive playground with our different cases (Need to wait some time for the first usage of interactive playground)
 
