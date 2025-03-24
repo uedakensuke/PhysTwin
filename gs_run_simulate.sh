@@ -1,6 +1,5 @@
-output_dir="./gaussian_splatting/output_dynamic"
+output_dir="./gaussian_output_dynamic"
 
-# views=("00000" "00025" "00050" "00075" "00100" "00125")
 # views=("0" "1" "2")
 views=("0")
 
@@ -14,10 +13,7 @@ views=("0")
 #         "single_push_sloth"
 #         "weird_package")
 
-scenes=("cloth_blue_fold" "cloth_blue_lift" "cloth_pant_fold" "cloth_pant_lift" 
-        "cloth_red_fold" "cloth_red_lift" "cloth_shirt_fold" "cloth_shirt_lift" 
-        "cloth_skirt_1_fold" "cloth_skirt_1_lift" "cloth_skirt_2_fold")
-
+scenes=("double_stretch_sloth")
 
 exp_name='init=hybrid_iso=True_ldepth=0.001_lnormal=0.0_laniso_0.0_lseg=1.0'
 
@@ -25,7 +21,7 @@ for scene_name in "${scenes[@]}"; do
 
     python gs_render_dynamics.py \
         -s ./data/gaussian_data/${scene_name} \
-        -m ./gaussian_splatting/output/${scene_name}/${exp_name} \
+        -m ./gaussian_output/${scene_name}/${exp_name} \
         --name ${scene_name} \
         --white_background
 

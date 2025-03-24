@@ -74,3 +74,33 @@ Options:
 -   --inv_ctrl: inverse the control direction
 -   --n_ctrol_parts: number of control panel (single: 1, double: 2) 
 -   --case_name: case name of the PhysTwin case
+
+### Train the PhysTwin with the data
+Use the processed data to train the PhysTwin. Instructions on how to get above `experiments_optimization`, `experiments` and `gaussian_output` (Can adjust the code below to only train on several cases). After this step, you get the PhysTwin that can be used in the interactive playground.
+```
+# Zero-order Optimization
+python script_optimize.py
+
+# First-order Optimization
+python script_train.py
+
+# Inference with the constructed models
+python script_inference.py
+
+# Trian the Gaussian with the first-frame data
+bash gs_run.sh
+```
+
+### Evaluate the performance of the contructed PhysTwin
+To evalaute the performance of the construected PhysTwin, need to render the images in the original viewpoint (similar logic to interactive playground)
+```
+# Use LBS to render the dynamic videos (The final videos in ./gaussian_output_dynamic folder)
+bash gs_run_simulate.sh
+python export_render_eval_data.py
+python visualize_render_results.py
+```
+
+### Data Processing from Raw Videos
+```
+python export_gaussian_data.py
+```

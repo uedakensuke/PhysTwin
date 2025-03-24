@@ -115,8 +115,7 @@ def render_sets(
     name: str = "dynamic",
 ):
     with torch.no_grad():
-
-        output_path = "./gaussian_splatting/output_dynamic"
+        output_path = "./gaussian_output_dynamic"
 
         bg_color = [1, 1, 1] if dataset.white_background else [0, 0, 0]
         background = torch.tensor(bg_color, dtype=torch.float32, device="cuda")

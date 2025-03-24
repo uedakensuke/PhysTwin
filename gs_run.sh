@@ -1,5 +1,5 @@
-output_dir="./gaussian_splatting/output"
-output_video_dir="./gaussian_splatting/output_video"
+output_dir="./gaussian_output"
+output_video_dir="./gaussian_output_video"
 # scenes=("double_lift_cloth_1" "double_lift_cloth_3" "double_lift_sloth" "double_lift_zebra"
 #         "double_stretch_sloth" "double_stretch_zebra"
 #         "rope_double_hand"
@@ -10,12 +10,7 @@ output_video_dir="./gaussian_splatting/output_video"
 #         "single_push_sloth"
 #         "weird_package")
 
-scenes=("cloth_blue_fold" "cloth_blue_lift" "cloth_pant_fold" "cloth_pant_lift" 
-        "cloth_red_fold" "cloth_red_lift" "cloth_shirt_fold" "cloth_shirt_lift" 
-        "cloth_skirt_1_fold" "cloth_skirt_1_lift" "cloth_skirt_2_fold")
-
-# scenes=("cloth_blue_fold")
-
+scenes=("double_stretch_sloth")
 
 exp_name="init=hybrid_iso=True_ldepth=0.001_lnormal=0.0_laniso_0.0_lseg=1.0"
 
@@ -26,7 +21,7 @@ for scene_name in "${scenes[@]}"; do
     # Training
     python gs_train.py \
         -s ./data/gaussian_data/${scene_name} \
-        -m ./gaussian_splatting/output/${scene_name}/${exp_name} \
+        -m ${output_dir}/${scene_name}/${exp_name} \
         --iterations 10000 \
         --lambda_depth 0.001 \
         --lambda_normal 0.0 \
@@ -39,7 +34,7 @@ for scene_name in "${scenes[@]}"; do
     # Rendering
     python gs_render.py \
         -s ./data/gaussian_data/${scene_name} \
-        -m ./gaussian_splatting/output/${scene_name}/${exp_name} \
+        -m ${output_dir}/${scene_name}/${exp_name} \
 
     # Convert images to video
     python gaussian_splatting/img2video.py \
