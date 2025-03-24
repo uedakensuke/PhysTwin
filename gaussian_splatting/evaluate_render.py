@@ -24,17 +24,18 @@ def compute_iou(mask1, mask2):
 
 
 if __name__ == "__main__":
-    
+    render_path = './data/render_eval_data'
+    human_mask_path = "./data/different_types_human_mask"
     root_data_dir = './data/gaussian_data'
     output_dir = './gaussian_output_dynamic'
 
-    log_dir = './logs'
+    log_dir = './results'
     os.makedirs(log_dir, exist_ok=True)
     log_file_path = os.path.join(log_dir, 'output_dynamic.txt')
 
     with open(log_file_path, 'w') as log_file:
 
-        scene_name = sorted(os.listdir(root_data_dir))
+        scene_name = sorted(os.listdir(render_path))
 
         all_psnrs_train, all_ssims_train, all_lpipss_train, all_ious_train = [], [], [], []
         all_psnrs_test, all_ssims_test, all_lpipss_test, all_ious_test = [], [], [], []
@@ -45,9 +46,11 @@ if __name__ == "__main__":
 
             scene_dir = os.path.join(root_data_dir, scene)
             output_scene_dir = os.path.join(output_dir, scene)
+            render_path_dir = os.path.join(render_path, scene)
+            human_mask_dir = os.path.join(human_mask_path, scene)
 
             # Load frame split info
-            with open(os.path.join(scene_dir, 'split.json'), 'r') as f:
+            with open(f"{render_path_dir}/split.json", 'r') as f:
                 info = json.load(f)
             frame_len = info['frame_len']
             train_f_idx_range = list(range(info["train"][0] + 1, info["train"][1]))   # +1 if ignoring the first frame
@@ -63,18 +66,19 @@ if __name__ == "__main__":
             for view_idx in range(1):   # only consider the first view
 
                 for frame_idx in train_f_idx_range:
-
-                    gt = np.array(Image.open(os.path.join(scene_dir, 'color', str(view_idx), f'{frame_idx}.png')))
-                    gt_mask = np.array(Image.open(os.path.join(scene_dir, 'mask', str(view_idx), f'{frame_idx}.png')))
+                    gt = np.array(Image.open(os.path.join(render_path_dir, 'color', str(view_idx), f'{frame_idx}.png')))
+                    gt_mask = np.array(Image.open(os.path.join(render_path_dir, 'mask', str(view_idx), f'{frame_idx}.png')))
                     gt_mask = gt_mask.astype(np.float32) / 255.
 
                     render = np.array(Image.open(os.path.join(output_scene_dir, str(view_idx), f'{frame_idx:05d}.png')))
                     render_mask = render[:, :, 3] if render.shape[-1] == 4 else np.ones_like(render[:, :, 0])
 
-                    human_mask = np.array(Image.open(os.path.join(scene_dir, 'human_mask', str(view_idx), '0', f'{frame_idx}.png')))
+                    human_mask = np.array(Image.open(os.path.join(human_mask_dir, 'mask', str(view_idx), '0', f'{frame_idx}.png')))
                     inv_human_mask = (1.0 - human_mask / 255.).astype(np.float32)
 
                     gt = gt.astype(np.float32) * gt_mask[..., None]
+                    bg_mask = gt_mask == 0
+                    gt[bg_mask] = [255, 255, 255]
                     render = render[:, :, :3].astype(np.float32)
 
                     gt = gt * inv_human_mask[..., None]
@@ -91,17 +95,19 @@ if __name__ == "__main__":
 
                 for frame_idx in test_f_idx_range:
                         
-                    gt = np.array(Image.open(os.path.join(scene_dir, 'color', str(view_idx), f'{frame_idx}.png')))
-                    gt_mask = np.array(Image.open(os.path.join(scene_dir, 'mask', str(view_idx), f'{frame_idx}.png')))
+                    gt = np.array(Image.open(os.path.join(render_path_dir, 'color', str(view_idx), f'{frame_idx}.png')))
+                    gt_mask = np.array(Image.open(os.path.join(render_path_dir, 'mask', str(view_idx), f'{frame_idx}.png')))
                     gt_mask = gt_mask.astype(np.float32) / 255.
 
                     render = np.array(Image.open(os.path.join(output_scene_dir, str(view_idx), f'{frame_idx:05d}.png')))
                     render_mask = render[:, :, 3] if render.shape[-1] == 4 else np.ones_like(render[:, :, 0])
 
-                    human_mask = np.array(Image.open(os.path.join(scene_dir, 'human_mask', str(view_idx), '0', f'{frame_idx}.png')))
+                    human_mask = np.array(Image.open(os.path.join(human_mask_dir, 'mask', str(view_idx), '0', f'{frame_idx}.png')))
                     inv_human_mask = (1.0 - human_mask / 255.).astype(np.float32)
 
                     gt = gt.astype(np.float32) * gt_mask[..., None]
+                    bg_mask = gt_mask == 0
+                    gt[bg_mask] = [255, 255, 255]
                     render = render[:, :, :3].astype(np.float32)
 
                     gt = gt * inv_human_mask[..., None]
@@ -222,27 +228,3 @@ if __name__ == "__main__":
         log_file.write(f"{overall_iou_test:<12.6f}\n")
         
         print(f"\nMetrics have been saved to: {log_file_path}")
-
-
-##### Include the first frame #####
-# ===== Overall Results Across All Scenes =====
-#          Overall PSNR (train): 30.0737
-#          Overall SSIM (train): 0.9646
-#          Overall LPIPS (train): 0.0251
-#          Overall IoU (train): 0.7936
-#          Overall PSNR (test): 28.0637
-#          Overall SSIM (test): 0.9615
-#          Overall LPIPS (test): 0.0382
-#          Overall IoU (test): 0.6881
-
-
-##### Ignore the first frame #####
-# ===== Overall Results Across All Scenes =====
-#          Overall PSNR (train): 30.0279
-#          Overall SSIM (train): 0.9645
-#          Overall LPIPS (train): 0.0252
-#          Overall IoU (train): 0.7928
-#          Overall PSNR (test): 28.0637
-#          Overall SSIM (test): 0.9615
-#          Overall LPIPS (test): 0.0382
-#          Overall IoU (test): 0.6881

@@ -57,7 +57,7 @@ Use the previously constructed PhysTwin to explore the interactive playground. U
 
 TODO: add a video here
 
-Run the interactive playground with our different cases
+Run the interactive playground with our different cases (Need to wait some time for the first usage of interactive playground)
 
 ```
 python interactive_playground.py \
@@ -98,9 +98,30 @@ To evalaute the performance of the construected PhysTwin, need to render the ima
 bash gs_run_simulate.sh
 python export_render_eval_data.py
 python visualize_render_results.py
+
+# Get the quantative results
+bash evaluate.sh
 ```
 
 ### Data Processing from Raw Videos
+The original data in each case only includes `color`, `depth`, `calibrate.pkl`, `metadata.json`. All other data are processed as below to get, including the projection, tracking and shape priors.
 ```
+# Process the data
+python script_process_data.py
+
+# Further get the data for first-frame Gaussian
 python export_gaussian_data.py
+
+# Get human mask data for visualization and rendering evaluation
+python export_video_human_mask.py
+```
+
+### Citation
+If you find this repo useful for your research, please consider citing the paper
+```
+@article{jiang2025phystwin,
+    title={PhysTwin: Physics-Informed Reconstruction and Simulation of Deformable Objects from Videos},
+    author={Jiang, Hanxiao and Hsu, Hao-Yu and Zhang, Kaifeng and Yu, Hsin-Ni and Wang, Shenlong and Li, Yunzhu},
+    journal={arXiv preprint arXiv:},
+}
 ```

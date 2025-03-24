@@ -23,6 +23,10 @@ with open("data_config.csv", newline="", encoding="utf-8") as csvfile:
         case_name = row[0]
         category = row[1]
         shape_prior = row[2]
+
+        if not os.path.exists(f"{base_path}/{case_name}"):
+            continue
+
         print(f"Processing {case_name}!!!!!!!!!!!!!!!")
 
         # Create the directory for the case

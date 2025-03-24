@@ -101,9 +101,10 @@ if PROCESS_SHAPE_PRIOR and SHAPE_PRIOR:
     existDir(f"{base_path}/{case_name}/shape")
     # Get the high-resolution of the image to prepare for the trellis generation
     with Timer("Image Upscale"):
-        os.system(
-            f"python ./data_process/image_upscale.py --img_path {base_path}/{case_name}/color/0/0.png --mask_path {mask_path} --output_path {base_path}/{case_name}/shape/high_resolution.png --category {category}"
-        )
+        if not os.path.isfile(f"{base_path}/{case_name}/shape/high_resolution.png"):
+            os.system(
+                f"python ./data_process/image_upscale.py --img_path {base_path}/{case_name}/color/0/0.png --mask_path {mask_path} --output_path {base_path}/{case_name}/shape/high_resolution.png --category {category}"
+            )
 
     # Get the masked image of the object
     with Timer("Image Segmentation"):
