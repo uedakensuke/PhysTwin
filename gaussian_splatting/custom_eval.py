@@ -25,8 +25,8 @@ def compute_iou(mask1, mask2):
 
 if __name__ == "__main__":
     
-    root_data_dir = '/home/haoyuyh3/Documents/maxhsu/qqtt/gaussian_data'
-    output_dir = '/home/haoyuyh3/Documents/maxhsu/qqtt/gaussian-recon/gaussian-splatting/output_dynamic'
+    root_data_dir = './data/gaussian_data'
+    output_dir = './gaussian_output_dynamic'
 
     log_dir = './logs'
     os.makedirs(log_dir, exist_ok=True)
