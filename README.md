@@ -20,7 +20,7 @@
 </span>
 
 <span class="author-block"><sup>1</sup>Columbia University,</span>
-<span class="author-block"><sup>2</sup>University of Illinois Urbana-Champaign,</span>
+<span class="author-block"><sup>2</sup>University of Illinois Urbana-Champaign</span>
 
 ### [Website](https://jianghanxiao.github.io/phystwin-web/) | [Paper](https://jianghanxiao.github.io/phystwin-web/phystwin.pdf) | [Arxiv](https://arxiv.org/abs/2503.17973)
 
