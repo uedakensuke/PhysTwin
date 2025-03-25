@@ -22,7 +22,7 @@
 <span class="author-block"><sup>1</sup>Columbia University,</span>
 <span class="author-block"><sup>2</sup>University of Illinois Urbana-Champaign,</span>
 
-### [Website](https://jianghanxiao.github.io/phystwin-web/) | [Paper](https://jianghanxiao.github.io/phystwin-web/phystwin.pdf) | [Arxiv]()
+### [Website](https://jianghanxiao.github.io/phystwin-web/) | [Paper](https://jianghanxiao.github.io/phystwin-web/phystwin.pdf) | [Arxiv](https://arxiv.org/abs/2503.17973)
 
 ### Overview
 This repository contains the official implementation of the **PhysTwin** framework.
@@ -122,6 +122,7 @@ If you find this repo useful for your research, please consider citing the paper
 @article{jiang2025phystwin,
     title={PhysTwin: Physics-Informed Reconstruction and Simulation of Deformable Objects from Videos},
     author={Jiang, Hanxiao and Hsu, Hao-Yu and Zhang, Kaifeng and Yu, Hsin-Ni and Wang, Shenlong and Li, Yunzhu},
-    journal={arXiv preprint arXiv:},
+    journal={arXiv preprint arXiv:2503.17973},
+    year={2025}
 }
 ```
