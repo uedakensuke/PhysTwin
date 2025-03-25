@@ -57,7 +57,7 @@ Use the previously constructed PhysTwin to explore the interactive playground. U
 
 ![example](./assets/sloth.gif)
 
-Run the interactive playground with our different cases (Need to wait some time for the first usage of interactive playground)
+Run the interactive playground with our different cases (Need to wait some time for the first usage of interactive playground; Can achieve about 30 FPS using RTX 4090)
 
 ```
 python interactive_playground.py \
@@ -67,7 +67,7 @@ python interactive_playground.py \
 
 # Examples of usage:
 python interactive_playground.py --n_ctrl_parts 2 --case_name double_stretch_sloth
-python interactive_playground.py --inv_ctrl --n_ctrl_parts 1 --case_name double_lift_cloth_3
+python interactive_playground.py --inv_ctrl --n_ctrl_parts 2 --case_name double_lift_cloth_3
 ```
 
 Options: 
