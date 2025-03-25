@@ -7,7 +7,6 @@ cd ../..
 
 # Download the checkpoints for superglue
 mkdir data_process/models/weights
-mkdir data_process/models/weights
 cd data_process/models/weights
 wget https://github.com/magicleap/SuperGluePretrainedNetwork/raw/refs/heads/master/models/weights/superglue_indoor.pth
 wget https://github.com/magicleap/SuperGluePretrainedNetwork/raw/refs/heads/master/models/weights/superglue_outdoor.pth
