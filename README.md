@@ -31,18 +31,20 @@ This repository contains the official implementation of the **PhysTwin** framewo
 
 ### Setup
 ```
-# Here we use cuda-12.1
+# Our code has been tested on both Linux and Windows using PyTorch 2.4.0 with CUDA 12.1.
+# On Linux, you can set the paths as follows if needed:
 export PATH={YOUR_DIR}/cuda/cuda-12.1/bin:$PATH
 export LD_LIBRARY_PATH={YOUR_DIR}/cuda/cuda-12.1/lib64:$LD_LIBRARY_PATH
-# Create conda environment
-conda create -y -n phystwin python=3.10
+
+# Create and activate the conda environment:
+conda env create -f environment.yml
 conda activate phystwin
 
-# Install the packages
-bash ./env_install/env_install.sh
+# If you need to update the environment:
+conda env update -f environment.yml
 
 # Download the necessary pretrained models for data processing
-bash ./env_install/download_pretrained_models.sh
+python download_pretrained_models.py
 ```
 
 ### Download the PhysTwin Data
