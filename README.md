@@ -32,17 +32,19 @@ This repository contains the official implementation of the **PhysTwin** framewo
 ### Setup
 ```
 # Here we use cuda-12.1
+# On Linux, you can add the CUDA paths as follows
 export PATH={YOUR_DIR}/cuda/cuda-12.1/bin:$PATH
 export LD_LIBRARY_PATH={YOUR_DIR}/cuda/cuda-12.1/lib64:$LD_LIBRARY_PATH
 # Create conda environment
-conda create -y -n phystwin python=3.10
+conda env create -f environment.yml
 conda activate phystwin
 
-# Install the packages
-bash ./env_install/env_install.sh
-
 # Download the necessary pretrained models for data processing
-bash ./env_install/download_pretrained_models.sh
+python ./env_install/download_pretrained_models.py
+
+# Install TRELLIS which is needed for data processing
+git clone --recurse-submodules https://github.com/microsoft/TRELLIS.git data_process/TRELLIS
+python env_install/trellis_setup.py --basic --xformers --flash-attn --diffoctreerast --spconv --mipgaussian --kaolin --nvdiffrast
 ```
 
 ### Download the PhysTwin Data
@@ -88,19 +90,19 @@ python script_train.py
 python script_inference.py
 
 # Trian the Gaussian with the first-frame data
-bash gs_run.sh
+python gs_run.py
 ```
 
 ### Evaluate the performance of the contructed PhysTwin
 To evalaute the performance of the construected PhysTwin, need to render the images in the original viewpoint (similar logic to interactive playground)
 ```
 # Use LBS to render the dynamic videos (The final videos in ./gaussian_output_dynamic folder)
-bash gs_run_simulate.sh
+python gs_run_simulate.py
 python export_render_eval_data.py
 python visualize_render_results.py
 
 # Get the quantative results
-bash evaluate.sh
+python evaluate.py
 ```
 
 ### Data Processing from Raw Videos
