@@ -1,27 +1,24 @@
+from pathlib import Path
 import glob
 import json
 import numpy as np
 import cv2
 
-base_path = "./data/different_types"
-prediction_dir = "./gaussian_output_dynamic"
-human_mask_path = (
-    "./data/different_types_human_mask"
-)
-object_mask_path = (
-    "./data/render_eval_data"
-)
+base_path = Path("./data/different_types")
+prediction_dir = Path("./gaussian_output_dynamic")
+human_mask_path = Path("./data/different_types_human_mask")
+object_mask_path = Path("./data/render_eval_data")
 
 height, width = 480, 848
 FPS = 30
 alpha = 0.7
 
-dir_names = glob.glob(f"{base_path}/*")
-for dir_name in dir_names:
-    case_name = dir_name.split("/")[-1]
+dir_paths = list(base_path.glob("*"))
+for dir_path in dir_paths:
+    case_name = dir_path.name
     print(f"Processing {case_name}!!!!!!!!!!!!!!!")
 
-    with open(f"{base_path}/{case_name}/split.json", "r") as f:
+    with (dir_path / "split.json").open("r") as f:
         split = json.load(f)
     frame_len = split["frame_len"]
 
@@ -30,28 +27,25 @@ for dir_name in dir_names:
         # Process each camera
         fourcc = cv2.VideoWriter_fourcc(*"avc1")  # Codec for .mp4 file format
         video_writer = cv2.VideoWriter(
-            f"{prediction_dir}/{case_name}/{i}_integrate.mp4",
+            str(prediction_dir / case_name / f"{i}_integrate.mp4"),
             fourcc,
             FPS,
             (width, height),
         )
 
         for frame_idx in range(frame_len):
-            render_path = f"{prediction_dir}/{case_name}/{i}/{frame_idx:05d}.png"
-            origin_image_path = f"{base_path}/{case_name}/color/{i}/{frame_idx}.png"
-            human_mask_image_path = (
-                f"{human_mask_path}/{case_name}/mask/{i}/0/{frame_idx}.png"
-            )
-            object_image_path = (
-                f"{object_mask_path}/{case_name}/mask/{i}/{frame_idx}.png"
-            )
+            render_path = prediction_dir / case_name / str(i) / f"{frame_idx:05d}.png"
+            origin_image_path = dir_path / "color" / str(i) / f"{frame_idx}.png"
+            human_mask_image_path = human_mask_path / case_name / "mask" / str(i) / "0" / f"{frame_idx}.png"
+            object_image_path = object_mask_path / case_name / "mask" / str(i) / f"{frame_idx}.png"
 
-            render_img = cv2.imread(render_path, cv2.IMREAD_UNCHANGED)
-            origin_img = cv2.imread(origin_image_path)
-            human_mask = cv2.imread(human_mask_image_path)
+            print(render_path)
+            render_img = cv2.imread(str(render_path), cv2.IMREAD_UNCHANGED)
+            origin_img = cv2.imread(str(origin_image_path))
+            human_mask = cv2.imread(str(human_mask_image_path))
             human_mask = cv2.cvtColor(human_mask, cv2.COLOR_BGR2GRAY)
             human_mask = human_mask > 0
-            object_mask = cv2.imread(object_image_path)
+            object_mask = cv2.imread(str(object_image_path))
             object_mask = cv2.cvtColor(object_mask, cv2.COLOR_BGR2GRAY)
             object_mask = object_mask > 0
 

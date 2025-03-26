@@ -12,8 +12,8 @@
 import torch
 from gaussian_splatting.scene import Scene
 import os
+from pathlib import Path
 from tqdm import tqdm
-from os import makedirs
 from gaussian_splatting.gaussian_renderer import render
 import torchvision
 from gaussian_splatting.utils.general_utils import safe_state
@@ -59,8 +59,8 @@ def render_set(
     disable_sh=False,
 ):
 
-    render_path = os.path.join(output_path, name)
-    makedirs(render_path, exist_ok=True)
+    render_path = Path(output_path) / name
+    render_path.mkdir(parents=True, exist_ok=True)
 
     # view_indices = [0, 25, 50, 75, 100, 125]
     view_indices = [0, 50, 100]
@@ -69,9 +69,9 @@ def render_set(
     for idx, view in enumerate(tqdm(selected_views, desc="Rendering progress")):
 
         # view_idx = view_indices[idx]
-        # view_render_path = os.path.join(render_path, '{0:05d}'.format(view_idx))
-        view_render_path = os.path.join(render_path, f"{idx}")
-        makedirs(view_render_path, exist_ok=True)
+        # view_render_path = render_path / f'{view_idx:05d}'
+        view_render_path = render_path / str(idx)
+        view_render_path.mkdir(parents=True, exist_ok=True)
 
         for frame_idx, gaussians in enumerate(gaussians_list):
 
@@ -100,7 +100,7 @@ def render_set(
 
             torchvision.utils.save_image(
                 rendering,
-                os.path.join(view_render_path, "{0:05d}".format(frame_idx) + ".png"),
+                view_render_path / f"{frame_idx:05d}.png",
             )
 
 
@@ -115,7 +115,7 @@ def render_sets(
     name: str = "dynamic",
 ):
     with torch.no_grad():
-        output_path = "./gaussian_output_dynamic"
+        output_path = Path("./gaussian_output_dynamic")
 
         bg_color = [1, 1, 1] if dataset.white_background else [0, 0, 0]
         background = torch.tensor(bg_color, dtype=torch.float32, device="cuda")
@@ -134,8 +134,8 @@ def render_sets(
         # gaussians = remove_gaussians_with_point_mesh_distance(gaussians, scene.mesh_sampled_points, dist_threshold=0.01)
 
         # rollout
-        exp_name = dataset.source_path.split("/")[-1]
-        ctrl_pts_path = f"./experiments/{exp_name}/inference.pkl"
+        exp_name = Path(dataset.source_path).name
+        ctrl_pts_path = Path("./experiments") / exp_name / "inference.pkl"
         with open(ctrl_pts_path, "rb") as f:
             ctrl_pts = pickle.load(f)  # (n_frames, n_ctrl_pts, 3) ndarray
         ctrl_pts = torch.tensor(ctrl_pts, dtype=torch.float32, device="cuda")
@@ -298,5 +298,5 @@ if __name__ == "__main__":
         args.name,
     )
 
-    with open("./rendering_finished_dynamic.txt", "a") as f:
+    with open(Path("./rendering_finished_dynamic.txt"), "a") as f:
         f.write("Rendering finished of " + args.name + "\n")
