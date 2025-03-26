@@ -44,6 +44,7 @@ bash ./env_install/env_install.sh
 # Download the necessary pretrained models for data processing
 bash ./env_install/download_pretrained_models.sh
 ```
+Thanks to @GuangyanCai contributions, now we also have a windows setup codebase in `windows_setup` branch.
 
 ### Download the PhysTwin Data
 Download the original data, processed data, and results into the project's root folder. (The following sections will explain how to process the raw observations and obtain the training results.)
