@@ -1437,7 +1437,7 @@ def get_simple_shadow(
     kernel = np.ones((kernel_size, kernel_size), np.uint8)
     kernel_1 = np.ones((3, 3), np.uint(8))
     dilated_shadow = cv2.dilate(shadow_image, kernel, iterations=1)
-    dilated_shadow = cv2.dilate(dilated_shadow, kernel, iterations=1)
+    dilated_shadow = cv2.dilate(dilated_shadow, kernel_1, iterations=1)
     final_shadow = cv2.erode(dilated_shadow, kernel, iterations=1)
 
     final_shadow[image_mask] = 0
