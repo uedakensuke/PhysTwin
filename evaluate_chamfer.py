@@ -4,15 +4,15 @@ import json
 import torch
 import csv
 import numpy as np
-import os
+from pathlib import Path
 from pytorch3d.loss import chamfer_distance
 
-prediction_dir = "./experiments"
-base_path = "./data/different_types"
-output_file = "results/final_results.csv"
+prediction_dir = Path("./experiments")
+base_path = Path("./data/different_types")
+output_file = Path("results/final_results.csv")
 
-if not os.path.exists("results"):
-    os.makedirs("results")
+if not output_file.parent.exists():
+    output_file.parent.mkdir()
 
 def evaluate_prediction(
     start_frame,
@@ -79,17 +79,17 @@ if __name__ == "__main__":
         ]
     )
 
-    dir_names = glob.glob(f"{prediction_dir}/*")
-    for dir_name in dir_names:
-        case_name = dir_name.split("/")[-1]
+    dir_names = list(prediction_dir.glob("*"))
+    for dir_path in dir_names:
+        case_name = dir_path.name
         print(f"Processing {case_name}")
 
         # Read the trajectory data
-        with open(f"{dir_name}/inference.pkl", "rb") as f:
+        with open(dir_path / "inference.pkl", "rb") as f:
             vertices = pickle.load(f)
 
         # Read the GT object points and masks
-        with open(f"{base_path}/{case_name}/final_data.pkl", "rb") as f:
+        with open(base_path / case_name / "final_data.pkl", "rb") as f:
             data = pickle.load(f)
 
         object_points = data["object_points"]
@@ -99,7 +99,7 @@ if __name__ == "__main__":
         num_surface_points = num_original_points + data["surface_points"].shape[0]
 
         # read the train/test split
-        with open(f"{base_path}/{case_name}/split.json", "r") as f:
+        with open(base_path / case_name / "split.json", "r") as f:
             split = json.load(f)
         train_frame = split["train"][1]
         test_frame = split["test"][1]

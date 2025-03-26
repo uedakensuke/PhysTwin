@@ -1,18 +1,18 @@
-import os
 import csv
 import json
+import shutil
+from pathlib import Path
 
-base_path = "./data/different_types"
-output_path = "./data/render_eval_data"
+base_path = Path("./data/different_types")
+output_path = Path("./data/render_eval_data") 
 CONTROLLER_NAME = "hand"
 
 
-def existDir(dir_path):
-    if not os.path.exists(dir_path):
-        os.makedirs(dir_path)
+def ensure_dir(dir_path: Path):
+    dir_path.mkdir(parents=True, exist_ok=True)
 
 
-existDir(output_path)
+ensure_dir(output_path)
 
 with open("data_config.csv", newline="", encoding="utf-8") as csvfile:
     reader = csv.reader(csvfile)
@@ -21,30 +21,42 @@ with open("data_config.csv", newline="", encoding="utf-8") as csvfile:
         category = row[1]
         shape_prior = row[2]
         
-        if not os.path.exists(f"{base_path}/{case_name}"):
+        case_path = base_path / case_name
+        if not case_path.exists():
             continue
         print(f"Processing {case_name}!!!!!!!!!!!!!!!")
-    
+
         # Create the directory for the case
-        existDir(f"{output_path}/{case_name}")
-        existDir(f"{output_path}/{case_name}/mask")
+        case_output_path = output_path / case_name
+        ensure_dir(case_output_path)
+        ensure_dir(case_output_path / "mask")
+
         for i in range(3):
             # Copy the original RGB image
-            os.system(
-                f"cp -r {base_path}/{case_name}/color {output_path}/{case_name}/"
+            shutil.copytree(
+                case_path / "color",
+                case_output_path / "color",
+                dirs_exist_ok=True
             )
+
             # Copy only the object mask image
             # Get the mask path for the image
-            with open(f"{base_path}/{case_name}/mask/mask_info_{i}.json", "r") as f:
+            mask_info_path = case_path / "mask" / f"mask_info_{i}.json"
+            with mask_info_path.open("r") as f:
                 data = json.load(f)
+
             obj_idx = None
             for key, value in data.items():
                 if value != CONTROLLER_NAME:
                     if obj_idx is not None:
                         raise ValueError("More than one object detected.")
                     obj_idx = int(key)
-            existDir(f"{output_path}/{case_name}/mask/{i}")
-            os.system(f"cp -r {base_path}/{case_name}/mask/{i}/{obj_idx}/* {output_path}/{case_name}/mask/{i}/")
-        
+
+            mask_output_path = case_output_path / "mask" / str(i)
+            ensure_dir(mask_output_path)
+            
+            mask_source = case_path / "mask" / str(i) / str(obj_idx)
+            shutil.copytree(mask_source, mask_output_path, dirs_exist_ok=True)
+
         # Copy the split.json
-        os.system(f"cp {base_path}/{case_name}/split.json {output_path}/{case_name}/")
+        shutil.copy2(case_path / "split.json", case_output_path / "split.json")
