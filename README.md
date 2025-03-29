@@ -29,6 +29,21 @@ This repository contains the official implementation of the **PhysTwin** framewo
 
 ![TEASER](./assets/teaser.png)
 
+
+### Update
+<font color="lightgreen">This repository will be actively maintained by the authors, with continuous updates introducing new features to inspire further research.</font>
+
+#### Upcoming Releases (Next Few Days)
+- **Force Visualization:** Visualize the forces applied to objects after optimization, aiding in force analysis from videos.
+- **Material Visualization:** Visualize object materials post-optimization to facilitate material analysis from interactions.
+- **Material Transfer:** Provide a demo for transferring material properties from one PhysTwin to another object.
+- **Rigid Object Demo:** Demonstrate our framework on rigid object interactions, showcasing its capability for rigid object tracking from videos.
+- **Claw Machine:** Utilize our constructed PhysTwin to develop a claw machine demo, illustrating collision handling among multiple objects.
+
+#### Long-Term Plans
+- **Batch Inferencing Support:** Integrate batch inferencing into the underlying SpringMass code, enabling faster rollouts and efficient data generation.
+
+
 ### Setup
 ```
 # Here we use cuda-12.1
@@ -115,6 +130,9 @@ python export_gaussian_data.py
 # Get human mask data for visualization and rendering evaluation
 python export_video_human_mask.py
 ```
+
+### Follow-up and Potential Collaborations  
+If you are interested in collaborating or extending this work for your research, feel free to contact us at `hanxiao.jiang@columbia.edu`.  
 
 ### Citation
 If you find this repo useful for your research, please consider citing the paper
