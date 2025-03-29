@@ -20,7 +20,7 @@
 </span>
 
 <span class="author-block"><sup>1</sup>Columbia University,</span>
-<span class="author-block"><sup>2</sup>University of Illinois Urbana-Champaign,</span>
+<span class="author-block"><sup>2</sup>University of Illinois Urbana-Champaign</span>
 
 ### [Website](https://jianghanxiao.github.io/phystwin-web/) | [Paper](https://jianghanxiao.github.io/phystwin-web/phystwin.pdf) | [Arxiv](https://arxiv.org/abs/2503.17973)
 
@@ -59,6 +59,7 @@ bash ./env_install/env_install.sh
 # Download the necessary pretrained models for data processing
 bash ./env_install/download_pretrained_models.sh
 ```
+Thanks to @GuangyanCai contributions, now we also have a windows setup codebase in `windows_setup` branch.
 
 ### Download the PhysTwin Data
 Download the original data, processed data, and results into the project's root folder. (The following sections will explain how to process the raw observations and obtain the training results.)
@@ -107,7 +108,7 @@ bash gs_run.sh
 ```
 
 ### Evaluate the performance of the contructed PhysTwin
-To evalaute the performance of the construected PhysTwin, need to render the images in the original viewpoint (similar logic to interactive playground)
+To evaluate the performance of the construected PhysTwin, need to render the images in the original viewpoint (similar logic to interactive playground)
 ```
 # Use LBS to render the dynamic videos (The final videos in ./gaussian_output_dynamic folder)
 bash gs_run_simulate.sh
