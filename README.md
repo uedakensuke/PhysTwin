@@ -31,9 +31,7 @@ This repository contains the official implementation of the **PhysTwin** framewo
 
 
 ### Update
-```diff
-+ This repository will be actively maintained by the authors, with continuous updates introducing new features to inspire further research.
-```
+**This repository will be actively maintained by the authors, with continuous updates introducing new features to inspire further research.**
 
 #### Upcoming Releases (Next Few Days)
 - **Force Visualization:** Visualize the forces applied to objects after optimization, aiding in force analysis from videos.
