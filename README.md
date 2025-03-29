@@ -93,7 +93,7 @@ bash gs_run.sh
 ```
 
 ### Evaluate the performance of the contructed PhysTwin
-To evalaute the performance of the construected PhysTwin, need to render the images in the original viewpoint (similar logic to interactive playground)
+To evaluate the performance of the construected PhysTwin, need to render the images in the original viewpoint (similar logic to interactive playground)
 ```
 # Use LBS to render the dynamic videos (The final videos in ./gaussian_output_dynamic folder)
 bash gs_run_simulate.sh
