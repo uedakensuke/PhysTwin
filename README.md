@@ -33,8 +33,14 @@ This repository contains the official implementation of the **PhysTwin** framewo
 ### Update
 **This repository will be actively maintained by the authors, with continuous updates introducing new features to inspire further research.**
 
+- **[25.4.1] Force Visualization:** Visualize the forces applied to objects after optimization, aiding in force analysis from videos. (See below for detailed instructions)
+<p align="center">
+  <img src="./assets/force_rope.gif" width="30%">
+  <img src="./assets/force_cloth.gif" width="30%">
+  <img src="./assets/force_sloth.gif" width="30%">
+</p>
+
 #### Upcoming Releases (Next Few Days)
-- **Force Visualization:** Visualize the forces applied to objects after optimization, aiding in force analysis from videos.
 - **Material Visualization:** Visualize object materials post-optimization to facilitate material analysis from interactions.
 - **Material Transfer:** Provide a demo for transferring material properties from one PhysTwin to another object.
 - **Rigid Object Demo:** Demonstrate our framework on rigid object interactions, showcasing its capability for rigid object tracking from videos.
@@ -131,6 +137,20 @@ python export_gaussian_data.py
 # Get human mask data for visualization and rendering evaluation
 python export_video_human_mask.py
 ```
+
+### Control Force Visualization
+Visualize the force applied by the hand to the object as inferred from our PhysTwin model, based solely on video data.
+```
+python visualize_force.py \
+--n_ctrl_parts [1 or 2] \
+--case_name [case_name]
+
+# Examples of usage:
+python visualize_force.py --case_name single_push_rope_1 --n_ctrl_parts 1 
+python visualize_force.py --case_name single_clift_cloth_1 --n_ctrl_parts 1    
+python visualize_force.py --case_name double_stretch_sloth 
+```
+The visualziation video is saved under `experiments` folder.
 
 ### Follow-up and Potential Collaborations  
 If you are interested in collaborating or extending this work for your research, feel free to contact us at `hanxiao.jiang@columbia.edu`.  
