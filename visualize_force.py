@@ -1,6 +1,5 @@
 from qqtt import InvPhyTrainerWarp
 from qqtt.utils import logger, cfg
-from datetime import datetime
 import random
 import numpy as np
 import torch
@@ -24,6 +23,8 @@ seed = 42
 set_all_seeds(seed)
 
 if __name__ == "__main__":
+    cfg.load_from_yaml("configs/real.yaml")
+
     parser = ArgumentParser()
     parser.add_argument(
         "--base_path",
@@ -35,16 +36,8 @@ if __name__ == "__main__":
         type=str,
         default="./gaussian_output",
     )
-    parser.add_argument(
-        "--bg_img_path",
-        type=str,
-        default="./data/bg.png",
-    )
     parser.add_argument("--case_name", type=str, default="double_lift_cloth_3")
     parser.add_argument("--n_ctrl_parts", type=int, default=2)
-    parser.add_argument(
-        "--inv_ctrl", action="store_true", help="invert horizontal control direction"
-    )
     args = parser.parse_args()
 
     base_path = args.base_path
@@ -55,7 +48,7 @@ if __name__ == "__main__":
     else:
         cfg.load_from_yaml("configs/real.yaml")
 
-    base_dir = f"./temp_experiments/{case_name}"
+    base_dir = f"./experiments/{case_name}"
 
     # Read the first-satage optimized parameters to set the indifferentiable parameters
     optimal_path = f"./experiments_optimization/{case_name}/optimal_params.pkl"
@@ -77,7 +70,7 @@ if __name__ == "__main__":
         data = json.load(f)
     cfg.intrinsics = np.array(data["intrinsics"])
     cfg.WH = data["WH"]
-    cfg.bg_img_path = args.bg_img_path
+    cfg.overlay_path = f"{base_path}/{case_name}/color"
 
     exp_name = "init=hybrid_iso=True_ldepth=0.001_lnormal=0.0_laniso_0.0_lseg=1.0"
     gaussians_path = f"{args.gaussian_path}/{case_name}/{exp_name}/point_cloud/iteration_10000/point_cloud.ply"
@@ -90,6 +83,6 @@ if __name__ == "__main__":
     )
 
     best_model_path = glob.glob(f"experiments/{case_name}/train/best_*.pth")[0]
-    trainer.interactive_playground(
-        best_model_path, gaussians_path, args.n_ctrl_parts, args.inv_ctrl
+    trainer.visualize_force(
+        best_model_path, gaussians_path, args.n_ctrl_parts
     )

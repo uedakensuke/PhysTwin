@@ -968,6 +968,9 @@ class InvPhyTrainerWarp:
         self.simulator.set_init_state(
             self.simulator.wp_init_vertices, self.simulator.wp_init_velocities
         )
+        prev_x = wp.to_torch(
+            self.simulator.wp_states[0].wp_x, requires_grad=False
+        ).clone()
 
         vis_cam_idx = 0
         FPS = cfg.FPS
@@ -1397,6 +1400,353 @@ class InvPhyTrainerWarp:
         )
         return view
 
+    def visualize_force(self, model_path, gs_path, n_ctrl_parts=2, force_scale=30000):
+        # Load the model
+        logger.info(f"Load model from {model_path}")
+        checkpoint = torch.load(model_path, map_location=cfg.device)
+
+        spring_Y = checkpoint["spring_Y"]
+        collide_elas = checkpoint["collide_elas"]
+        collide_fric = checkpoint["collide_fric"]
+        collide_object_elas = checkpoint["collide_object_elas"]
+        collide_object_fric = checkpoint["collide_object_fric"]
+        num_object_springs = checkpoint["num_object_springs"]
+
+        assert (
+            len(spring_Y) == self.simulator.n_springs
+        ), "Check if the loaded checkpoint match the config file to connect the springs"
+
+        self.simulator.set_spring_Y(torch.log(spring_Y).detach().clone())
+        self.simulator.set_collide(
+            collide_elas.detach().clone(), collide_fric.detach().clone()
+        )
+        self.simulator.set_collide_object(
+            collide_object_elas.detach().clone(),
+            collide_object_fric.detach().clone(),
+        )
+
+        video_path = f"{cfg.base_dir}/force_visualization.mp4"
+
+        vis_cam_idx = 0
+        FPS = cfg.FPS
+        width, height = cfg.WH
+        intrinsic = cfg.intrinsics[vis_cam_idx]
+        w2c = cfg.w2cs[vis_cam_idx]
+
+        gaussians = GaussianModel(sh_degree=3)
+        gaussians.load_ply(gs_path)
+        gaussians = remove_gaussians_with_low_opacity(gaussians, 0.1)
+        gaussians.isotropic = True
+        current_pos = gaussians.get_xyz
+        current_rot = gaussians.get_rotation
+        use_white_background = True  # set to True for white background
+        bg_color = [1, 1, 1] if use_white_background else [0, 0, 0]
+        background = torch.tensor(bg_color, dtype=torch.float32, device=cfg.device)
+        view = self._create_gs_view(w2c, intrinsic, height, width)
+        prev_x = None
+        relations = None
+        weights = None
+
+        # Get the controller points index
+        first_frame_controller_points = self.simulator.controller_points[0]
+        force_indexes = []
+        if n_ctrl_parts == 1:
+            force_indexes.append(
+                torch.arange(first_frame_controller_points.shape[0], device=cfg.device)
+            )
+        else:
+            # Use kmeans to find the two set of controller points
+            kmeans = KMeans(n_clusters=n_ctrl_parts, random_state=0, n_init=10)
+            cluster_labels = kmeans.fit_predict(
+                first_frame_controller_points.cpu().numpy()
+            )
+            for i in range(n_ctrl_parts):
+                force_indexes.append(
+                    torch.tensor(np.where(cluster_labels == i)[0], device=cfg.device)
+                )
+
+        # Preprocess to get all the springs for different set of control points
+        control_springs = self.init_springs[num_object_springs:]
+
+        # Judge the springs whose left point is in the force_indexes
+        force_springs = []
+        force_object_points = []
+        force_rest_lengths = []
+        force_spring_Y = []
+
+        for i in range(n_ctrl_parts):
+            force_springs.append([])
+            force_rest_lengths.append([])
+            force_spring_Y.append([])
+            force_object_points.append([])
+            for j in range(len(control_springs)):
+                if (control_springs[j][0] - self.num_all_points) in force_indexes[i]:
+                    force_springs[i].append(control_springs[j])
+                    force_rest_lengths[i].append(
+                        self.init_rest_lengths[j + num_object_springs]
+                    )
+                    force_spring_Y[i].append(spring_Y[j + num_object_springs])
+                    force_object_points[i].append(control_springs[j][1])
+            force_springs[i] = torch.vstack(force_springs[i])
+            force_springs[i][:, 0] -= self.num_all_points
+            force_rest_lengths[i] = torch.tensor(
+                force_rest_lengths[i], device=cfg.device
+            )
+            force_spring_Y[i] = torch.tensor(force_spring_Y[i], device=cfg.device)
+            force_object_points[i] = torch.tensor(
+                force_object_points[i], device=cfg.device
+            )
+
+        # Start to visualize the stuffs
+        logger.info("Visualizing the simulation")
+        # Visualize the whole simulation using current set of parameters in the physical simulator
+        frame_len = self.dataset.frame_len
+        self.simulator.set_init_state(
+            self.simulator.wp_init_vertices, self.simulator.wp_init_velocities
+        )
+        prev_x = wp.to_torch(
+            self.simulator.wp_states[0].wp_x, requires_grad=False
+        ).clone()
+
+        vis = o3d.visualization.Visualizer()
+        vis.create_window(visible=False, width=width, height=height)
+        fourcc = cv2.VideoWriter_fourcc(*"avc1")  # Codec for .mp4 file format
+        video_writer = cv2.VideoWriter(video_path, fourcc, FPS, (width, height))
+
+        frame_path = f"{cfg.overlay_path}/{vis_cam_idx}/0.png"
+        frame = cv2.imread(frame_path)
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+        results = render_gaussian(view, gaussians, None, background)
+        rendering = results["render"]  # (4, H, W)
+        image = rendering.permute(1, 2, 0).detach().cpu().numpy()
+
+        image = image.clip(0, 1)
+        if use_white_background:
+            image_mask = np.logical_and(
+                (image != 1.0).any(axis=2), image[:, :, 3] > 100 / 255
+            )
+        else:
+            image_mask = np.logical_and(
+                (image != 0.0).any(axis=2), image[:, :, 3] > 100 / 255
+            )
+        image[~image_mask, 3] = 0
+
+        alpha = image[..., 3:4]
+        rgb = image[..., :3] * 255
+        frame = alpha * rgb + (1 - alpha) * frame
+        frame = frame.astype(np.uint8)
+
+        force_arrow_meshes = []
+        for j in range(n_ctrl_parts):
+            # Calculate the center of the force_object_points
+            force_center = (
+                torch.mean(prev_x[force_object_points[j]], dim=0).cpu().numpy()
+            )
+            # Calculate the force vector
+            force_vector = (
+                self.get_force_vector(
+                    prev_x,
+                    force_springs[j],
+                    force_rest_lengths[j],
+                    force_spring_Y[j],
+                    self.num_all_points,
+                    self.simulator.controller_points[0],
+                )
+                .cpu()
+                .numpy()
+            )
+            # Create arrow mesh in open3d
+            if not (force_vector == 0).all():
+                arrow_mesh = getArrowMesh(
+                    origin=force_center,
+                    end=force_center + force_vector / force_scale,
+                    color=[1, 0, 0],
+                )
+                force_arrow_meshes.append(arrow_mesh)
+                vis.add_geometry(force_arrow_meshes[j])
+        # Adjust the viewpoint
+        view_control = vis.get_view_control()
+        camera_params = o3d.camera.PinholeCameraParameters()
+        intrinsic_parameter = o3d.camera.PinholeCameraIntrinsic(
+            width, height, intrinsic
+        )
+        camera_params.intrinsic = intrinsic_parameter
+        camera_params.extrinsic = w2c
+        view_control.convert_from_pinhole_camera_parameters(
+            camera_params, allow_arbitrary=True
+        )
+
+        force_image = np.asarray(vis.capture_screen_float_buffer(do_render=True))
+        force_image = (force_image * 255).astype(np.uint8)
+        force_vis_mask = np.all(force_image == [255, 255, 255], axis=-1)
+        frame[~force_vis_mask] = force_image[~force_vis_mask]
+
+        frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+        # cv2.imshow("Interactive Playground", frame)
+        # cv2.waitKey(0)
+        video_writer.write(frame)
+
+        for i in tqdm(range(1, frame_len)):
+            if cfg.data_type == "real":
+                self.simulator.set_controller_target(i, pure_inference=True)
+            if self.simulator.object_collision_flag:
+                self.simulator.update_collision_graph()
+
+            wp.capture_launch(self.simulator.forward_graph)
+            x = wp.to_torch(self.simulator.wp_states[-1].wp_x, requires_grad=False)
+            # Set the intial state for the next step
+            self.simulator.set_init_state(
+                self.simulator.wp_states[-1].wp_x,
+                self.simulator.wp_states[-1].wp_v,
+            )
+
+            torch.cuda.synchronize()
+
+            # Do LBS on the gaussian kernels
+            prev_particle_pos = prev_x
+            cur_particle_pos = x
+            if relations is None:
+                relations = get_topk_indices(
+                    prev_x, K=16
+                )  # only computed in the first iteration
+
+            if weights is None:
+                weights, weights_indices = knn_weights_sparse(
+                    prev_particle_pos, current_pos, K=16
+                )  # only computed in the first iteration
+
+            with torch.no_grad():
+                weights = calc_weights_vals_from_indices(
+                    prev_particle_pos, current_pos, weights_indices
+                )
+
+                current_pos, current_rot, _ = interpolate_motions_speedup(
+                    bones=prev_particle_pos,
+                    motions=cur_particle_pos - prev_particle_pos,
+                    relations=relations,
+                    weights=weights,
+                    weights_indices=weights_indices,
+                    xyz=current_pos,
+                    quat=current_rot,
+                )
+
+                # update gaussians with the new positions and rotations
+                gaussians._xyz = current_pos
+                gaussians._rotation = current_rot
+
+            prev_x = x.clone()
+
+            frame_path = f"{cfg.overlay_path}/{vis_cam_idx}/{i}.png"
+            frame = cv2.imread(frame_path)
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+            results = render_gaussian(view, gaussians, None, background)
+            rendering = results["render"]  # (4, H, W)
+            image = rendering.permute(1, 2, 0).detach().cpu().numpy()
+
+            image = image.clip(0, 1)
+            if use_white_background:
+                image_mask = np.logical_and(
+                    (image != 1.0).any(axis=2), image[:, :, 3] > 100 / 255
+                )
+            else:
+                image_mask = np.logical_and(
+                    (image != 0.0).any(axis=2), image[:, :, 3] > 100 / 255
+                )
+            image[~image_mask, 3] = 0
+
+            alpha = image[..., 3:4]
+            rgb = image[..., :3] * 255
+            frame = alpha * rgb + (1 - alpha) * frame
+            frame = frame.astype(np.uint8)
+
+            for arrow_mesh in force_arrow_meshes:
+                vis.remove_geometry(arrow_mesh)
+
+            force_arrow_meshes = []
+            for j in range(n_ctrl_parts):
+                # Calculate the center of the force_object_points
+                force_center = (
+                    torch.mean(x[force_object_points[j]], dim=0).cpu().numpy()
+                )
+                # Calculate the force vector
+                force_vector = (
+                    self.get_force_vector(
+                        x,
+                        force_springs[j],
+                        force_rest_lengths[j],
+                        force_spring_Y[j],
+                        self.num_all_points,
+                        self.simulator.controller_points[i],
+                    )
+                    .cpu()
+                    .numpy()
+                )
+                if not (force_vector == 0).all():
+                    # Create arrow mesh in open3d
+                    arrow_mesh = getArrowMesh(
+                        origin=force_center,
+                        end=force_center + force_vector / force_scale,
+                        color=[1, 0, 0],
+                    )
+                force_arrow_meshes.append(arrow_mesh)
+                vis.add_geometry(force_arrow_meshes[j])
+
+            view_control = vis.get_view_control()
+            camera_params = o3d.camera.PinholeCameraParameters()
+            intrinsic_parameter = o3d.camera.PinholeCameraIntrinsic(
+                width, height, intrinsic
+            )
+            camera_params.intrinsic = intrinsic_parameter
+            camera_params.extrinsic = w2c
+            view_control.convert_from_pinhole_camera_parameters(
+                camera_params, allow_arbitrary=True
+            )
+
+            vis.poll_events()
+            vis.update_renderer()
+
+            force_image = np.asarray(vis.capture_screen_float_buffer(do_render=True))
+            force_image = (force_image * 255).astype(np.uint8)
+            force_vis_mask = np.all(force_image == [255, 255, 255], axis=-1)
+            frame[~force_vis_mask] = force_image[~force_vis_mask]
+            frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+            video_writer.write(frame)
+
+            # cv2.imshow("Interactive Playground", frame)
+            # cv2.waitKey(0)
+        vis.destroy_window()
+        video_writer.release()
+
+    def get_force_vector(
+        self, x, springs, rest_lengths, spring_Y, num_object_points, controller_points
+    ):
+        with torch.no_grad():
+            # Calculate the force of the springs
+            x1 = controller_points[springs[:, 0]]
+            x2 = x[springs[:, 1]]
+
+            dis = x2 - x1
+            dis_len = torch.norm(dis, dim=1)
+
+            d = dis / torch.clamp(dis_len, min=1e-6)[:, None]
+            spring_forces = (
+                torch.clamp(spring_Y, min=cfg.spring_Y_min, max=cfg.spring_Y_max)[
+                    :, None
+                ]
+                * (dis_len / rest_lengths - 1.0)[:, None]
+                * d
+            )
+
+            total_force = -spring_forces.sum(dim=0)
+            # total_force = spring_forces[0]
+            # import pdb
+            # pdb.set_trace()
+
+        return total_force
+
+
 def get_simple_shadow(
     points,
     intrinsic,
@@ -1443,3 +1793,56 @@ def get_simple_shadow(
     final_shadow[image_mask] = 0
     final_shadow = final_shadow == 255
     return final_shadow
+
+
+# Borrow ideas and codes from H. Sánchez's answer
+# https://stackoverflow.com/questions/59026581/create-arrows-in-open3d
+def getArrowMesh(origin=[0, 0, 0], end=None, color=[0, 0, 0]):
+    vec_Arr = np.array(end) - np.array(origin)
+    vec_len = np.linalg.norm(vec_Arr)
+    mesh_arrow = o3d.geometry.TriangleMesh.create_arrow(
+        cone_height=0.05 * vec_len,
+        cone_radius=0.002,
+        cylinder_height=0.2 * vec_len,
+        cylinder_radius=0.003,
+    )
+    mesh_arrow.paint_uniform_color(color)
+    rot_mat = _caculate_align_mat(vec_Arr / vec_len)
+    mesh_arrow.rotate(rot_mat, center=np.array([0, 0, 0]))
+    mesh_arrow.translate(np.array(origin))
+    return mesh_arrow
+
+
+def _get_cross_prod_mat(pVec_Arr):
+    # pVec_Arr shape (3)
+    qCross_prod_mat = np.array(
+        [
+            [0, -pVec_Arr[2], pVec_Arr[1]],
+            [pVec_Arr[2], 0, -pVec_Arr[0]],
+            [-pVec_Arr[1], pVec_Arr[0], 0],
+        ]
+    )
+    return qCross_prod_mat
+
+
+def _caculate_align_mat(pVec_Arr):
+    scale = np.linalg.norm(pVec_Arr)
+    pVec_Arr = pVec_Arr / scale
+    # must ensure pVec_Arr is also a unit vec.
+    z_unit_Arr = np.array([0, 0, 1])
+    z_mat = _get_cross_prod_mat(z_unit_Arr)
+
+    z_c_vec = np.matmul(z_mat, pVec_Arr)
+    z_c_vec_mat = _get_cross_prod_mat(z_c_vec)
+    if np.dot(z_unit_Arr, pVec_Arr) == -1:
+        qTrans_Mat = -np.eye(3, 3)
+    elif np.dot(z_unit_Arr, pVec_Arr) == 1:
+        qTrans_Mat = np.eye(3, 3)
+    else:
+        qTrans_Mat = (
+            np.eye(3, 3)
+            + z_c_vec_mat
+            + np.matmul(z_c_vec_mat, z_c_vec_mat) / (1 + np.dot(z_unit_Arr, pVec_Arr))
+        )
+    qTrans_Mat *= scale
+    return qTrans_Mat
