@@ -60,6 +60,7 @@ conda create -y -n phystwin python=3.10
 conda activate phystwin
 
 # Install the packages
+# If you only want to explore the interactive playground, you can skip installing Trellis, Grounding-SAM-2, RealSense, and SDXL.
 bash ./env_install/env_install.sh
 
 # Download the necessary pretrained models for data processing
