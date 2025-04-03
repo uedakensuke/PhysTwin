@@ -33,6 +33,8 @@ This repository contains the official implementation of the **PhysTwin** framewo
 ### Update
 **This repository will be actively maintained by the authors, with continuous updates introducing new features to inspire further research.**
 
+- **[25.4.3] LBS GPU Memory Fix:** Clear intermediate variables to significantly reduce GPU memory usage in the interactive playground. The sloth case now requires only about 4GB in total. (Pull the latest code to apply the fix.)
+
 - **[25.4.1] Force Visualization:** Visualize the forces applied to objects after optimization, aiding in force analysis from videos. (See below for detailed instructions)
 <p align="center">
   <img src="./assets/force_rope.gif" width="30%">
