@@ -1603,20 +1603,20 @@ class InvPhyTrainerWarp:
 
             torch.cuda.synchronize()
 
-            # Do LBS on the gaussian kernels
-            prev_particle_pos = prev_x
-            cur_particle_pos = x
-            if relations is None:
-                relations = get_topk_indices(
-                    prev_x, K=16
-                )  # only computed in the first iteration
-
-            if weights is None:
-                weights, weights_indices = knn_weights_sparse(
-                    prev_particle_pos, current_pos, K=16
-                )  # only computed in the first iteration
-
             with torch.no_grad():
+                # Do LBS on the gaussian kernels
+                prev_particle_pos = prev_x
+                cur_particle_pos = x
+                if relations is None:
+                    relations = get_topk_indices(
+                        prev_x, K=16
+                    )  # only computed in the first iteration
+
+                if weights is None:
+                    weights, weights_indices = knn_weights_sparse(
+                        prev_particle_pos, current_pos, K=16
+                    )  # only computed in the first iteration
+
                 weights = calc_weights_vals_from_indices(
                     prev_particle_pos, current_pos, weights_indices
                 )

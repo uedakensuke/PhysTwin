@@ -33,6 +33,12 @@ This repository contains the official implementation of the **PhysTwin** framewo
 ### Update
 **This repository will be actively maintained by the authors, with continuous updates introducing new features to inspire further research.**
 
+- **[25.4.3] Multiple Objects Demos:** Showthe experimental features for handling collisions among multiple PhysTwins we construct. (See below for detailed instructions)
+<p align="center">
+  <img src="./assets/rope_multiple.gif" width="45%">
+  <img src="./assets/sloth_multiple.gif" width="45%">
+</p>
+
 - **[25.4.3] LBS GPU Memory Fix:** Clear intermediate variables to significantly reduce GPU memory usage in the interactive playground. The sloth case now requires only about 4GB in total. (Pull the latest code to apply the fix.)
 
 - **[25.4.1] Force Visualization:** Visualize the forces applied to objects after optimization, aiding in force analysis from videos. (See below for detailed instructions)
@@ -46,7 +52,6 @@ This repository contains the official implementation of the **PhysTwin** framewo
 - **Material Visualization:** Visualize object materials post-optimization to facilitate material analysis from interactions.
 - **Material Transfer:** Provide a demo for transferring material properties from one PhysTwin to another object.
 - **Rigid Object Demo:** Demonstrate our framework on rigid object interactions, showcasing its capability for rigid object tracking from videos.
-- **Claw Machine:** Utilize our constructed PhysTwin to develop a claw machine demo, illustrating collision handling among multiple objects.
 
 #### Long-Term Plans
 - **Batch Inferencing Support:** Integrate batch inferencing into the underlying SpringMass code, enabling faster rollouts and efficient data generation.
@@ -154,6 +159,19 @@ python visualize_force.py --case_name single_clift_cloth_1 --n_ctrl_parts 1
 python visualize_force.py --case_name double_stretch_sloth 
 ```
 The visualziation video is saved under `experiments` folder.
+
+### Multiple Objects Demos
+Try the experimental features for handling collisions among the multiple PhysTwins we construct.
+
+```
+# The stuff is deployed in the 'claw_matchine' branch
+git pull
+git checkout claw_machine
+
+# Play with the examples
+python interactive_playground.py --n_ctrl_parts 1 --case_name single_push_rope_1 --n_dup 4
+python interactive_playground.py --n_ctrl_parts 2 --case_name double_stretch_sloth --n_dup 2
+```
 
 ### Follow-up and Potential Collaborations  
 If you are interested in collaborating or extending this work for your research, feel free to contact us at `hanxiao.jiang@columbia.edu`.  
