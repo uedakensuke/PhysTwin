@@ -1364,6 +1364,7 @@ class InvPhyTrainerWarp:
         collide_object_fric = checkpoint["collide_object_fric"]
         num_object_springs = checkpoint["num_object_springs"]
 
+        assert n_dup > 0, "n_dup must be greater than 0"
         if n_dup > 0:
 
             obj_spring_Y = spring_Y[: self.num_object_springs]
@@ -1380,7 +1381,7 @@ class InvPhyTrainerWarp:
             ctrl_init_rest_lengths = self.init_rest_lengths[self.num_object_springs :]
 
             OFFSET = torch.tensor(
-                [0.0, 0.0, -0.3], dtype=torch.float32, device=cfg.device
+                [0.0, 0.1, -0.55], dtype=torch.float32, device=cfg.device
             )
             n_vert_single_obj = obj_init_vertices.shape[0]
             n_springs_single_obj = obj_init_springs.shape[0]
@@ -1429,6 +1430,13 @@ class InvPhyTrainerWarp:
             self.init_rest_lengths = out_init_rest_lengths
             self.init_masses = out_init_masses
             self.init_masks = out_init_masks
+
+            # cfg.drag_damping = 30
+            # cfg.collide_fric = 0.0
+            # cfg.collide_elas = 0.0
+            # cfg.collide_object_fric = 0.0
+            # cfg.collide_object_elas = 0.0
+            cfg.collision_dist = 0.015
 
             self.simulator = SpringMassSystemWarp(
                 self.init_vertices,     # change

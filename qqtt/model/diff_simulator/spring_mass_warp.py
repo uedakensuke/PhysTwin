@@ -294,6 +294,13 @@ def object_collision(
     if valid_count > 0:
         J_average = J_sum / valid_count
         v_new[tid] = v1 - J_average / m1
+        thres = 1e-1
+        if v_new[tid][0] < thres and v_new[tid][0] > -thres:
+            v_new[tid][0] = 0.0
+        if v_new[tid][1] < thres and v_new[tid][1] > -thres:
+            v_new[tid][1] = 0.0
+        if v_new[tid][2] < thres and v_new[tid][2] > -thres:
+            v_new[tid][2] = 0.0
     else:
         v_new[tid] = v1
 
