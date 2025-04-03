@@ -1227,23 +1227,22 @@ class InvPhyTrainerWarp:
             torch.cuda.synchronize()
 
             if prev_x is not None:
-
-                prev_particle_pos = prev_x
-                cur_particle_pos = x
-
-                if relations is None:
-                    relations = get_topk_indices(
-                        prev_x, K=16
-                    )  # only computed in the first iteration
-
-                if weights is None:
-                    weights, weights_indices = knn_weights_sparse(
-                        prev_particle_pos, current_pos, K=16
-                    )  # only computed in the first iteration
-
-                interp_timer.start()
-
                 with torch.no_grad():
+                    prev_particle_pos = prev_x
+                    cur_particle_pos = x
+
+                    if relations is None:
+                        relations = get_topk_indices(
+                            prev_x, K=16
+                        )  # only computed in the first iteration
+
+                    if weights is None:
+                        weights, weights_indices = knn_weights_sparse(
+                            prev_particle_pos, current_pos, K=16
+                        )  # only computed in the first iteration
+
+                    interp_timer.start()
+
                     weights = calc_weights_vals_from_indices(
                         prev_particle_pos, current_pos, weights_indices
                     )
@@ -1751,42 +1750,41 @@ class InvPhyTrainerWarp:
             torch.cuda.synchronize()
 
             if prev_x is not None:
-
-                prev_particle_pos = prev_x
-                cur_particle_pos = x
-
-                if relations is None:
-                    if n_dup > 0:
-                        relations = []
-                        for dup_i in range(n_dup+1):
-                            relations.append(get_topk_indices(
-                                prev_x[dup_i * n_vert_single_obj:(dup_i + 1) * n_vert_single_obj], K=16
-                            ))
-                    else:
-                        relations = get_topk_indices(
-                            prev_x, K=16
-                        )  # only computed in the first iteration
-
-                if weights is None:
-                    if n_dup > 0:
-                        weights = []
-                        weights_indices = []
-                        for dup_i in range(n_dup+1):
-                            w, w_idx = knn_weights_sparse(
-                                prev_particle_pos[dup_i * n_vert_single_obj:(dup_i + 1) * n_vert_single_obj],
-                                current_pos[dup_i * n_gaussians_single_obj:(dup_i + 1) * n_gaussians_single_obj],
-                                K=16
-                            )
-                            weights.append(w)
-                            weights_indices.append(w_idx)
-                    else:
-                        weights, weights_indices = knn_weights_sparse(
-                            prev_particle_pos, current_pos, K=16
-                        )  # only computed in the first iteration
-
-                interp_timer.start()
-
                 with torch.no_grad():
+                    prev_particle_pos = prev_x
+                    cur_particle_pos = x
+
+                    if relations is None:
+                        if n_dup > 0:
+                            relations = []
+                            for dup_i in range(n_dup+1):
+                                relations.append(get_topk_indices(
+                                    prev_x[dup_i * n_vert_single_obj:(dup_i + 1) * n_vert_single_obj], K=16
+                                ))
+                        else:
+                            relations = get_topk_indices(
+                                prev_x, K=16
+                            )  # only computed in the first iteration
+
+                    if weights is None:
+                        if n_dup > 0:
+                            weights = []
+                            weights_indices = []
+                            for dup_i in range(n_dup+1):
+                                w, w_idx = knn_weights_sparse(
+                                    prev_particle_pos[dup_i * n_vert_single_obj:(dup_i + 1) * n_vert_single_obj],
+                                    current_pos[dup_i * n_gaussians_single_obj:(dup_i + 1) * n_gaussians_single_obj],
+                                    K=16
+                                )
+                                weights.append(w)
+                                weights_indices.append(w_idx)
+                        else:
+                            weights, weights_indices = knn_weights_sparse(
+                                prev_particle_pos, current_pos, K=16
+                            )  # only computed in the first iteration
+
+                    interp_timer.start()
+
 
                     if n_dup > 0:
                         for dup_i in range(n_dup+1):
