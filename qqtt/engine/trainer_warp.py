@@ -1227,23 +1227,23 @@ class InvPhyTrainerWarp:
             torch.cuda.synchronize()
 
             if prev_x is not None:
-
-                prev_particle_pos = prev_x
-                cur_particle_pos = x
-
-                if relations is None:
-                    relations = get_topk_indices(
-                        prev_x, K=16
-                    )  # only computed in the first iteration
-
-                if weights is None:
-                    weights, weights_indices = knn_weights_sparse(
-                        prev_particle_pos, current_pos, K=16
-                    )  # only computed in the first iteration
-
-                interp_timer.start()
-
                 with torch.no_grad():
+
+                    prev_particle_pos = prev_x
+                    cur_particle_pos = x
+
+                    if relations is None:
+                        relations = get_topk_indices(
+                            prev_x, K=16
+                        )  # only computed in the first iteration
+
+                    if weights is None:
+                        weights, weights_indices = knn_weights_sparse(
+                            prev_particle_pos, current_pos, K=16
+                        )  # only computed in the first iteration
+
+                    interp_timer.start()
+
                     weights = calc_weights_vals_from_indices(
                         prev_particle_pos, current_pos, weights_indices
                     )
