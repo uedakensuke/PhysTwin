@@ -45,6 +45,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "--inv_ctrl", action="store_true", help="invert horizontal control direction"
     )
+    parser.add_argument(
+        "--n_dup", type=int, default=0, help="number of object duplicates"
+    )
     args = parser.parse_args()
 
     base_path = args.base_path
@@ -90,6 +93,12 @@ if __name__ == "__main__":
     )
 
     best_model_path = glob.glob(f"experiments/{case_name}/train/best_*.pth")[0]
-    trainer.interactive_playground(
-        best_model_path, gaussians_path, args.n_ctrl_parts, args.inv_ctrl
-    )
+
+    if args.n_dup == 0:
+        trainer.interactive_playground(
+            best_model_path, gaussians_path, args.n_ctrl_parts, args.inv_ctrl
+        )
+    else:
+        trainer.interactive_playground_with_duplicates(
+            best_model_path, gaussians_path, args.n_ctrl_parts, args.inv_ctrl, n_dup=args.n_dup
+        )
