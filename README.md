@@ -33,7 +33,15 @@ This repository contains the official implementation of the **PhysTwin** framewo
 ### Update
 **This repository will be actively maintained by the authors, with continuous updates introducing new features to inspire further research.**
 
-- **[25.4.3] Multiple Objects Demos:** Showthe experimental features for handling collisions among multiple PhysTwins we construct. (See below for detailed instructions)
+- **[25.4.4] Material Visualization:** Show the experimental features to visualize the materials approximated from the underlying spring-mass model. (See below for detailed instructions)
+<p align="center">
+  <img src="./assets/material_rope.gif" width="30%">
+  <img src="./assets/material_cloth.gif" width="30%">
+  <img src="./assets/material_sloth.gif" width="30%">
+</p>
+
+
+- **[25.4.3] Multiple Objects Demos:** Show the experimental features for handling collisions among multiple PhysTwins we construct. (See below for detailed instructions)
 <p align="center">
   <img src="./assets/rope_multiple.gif" width="45%">
   <img src="./assets/sloth_multiple.gif" width="45%">
@@ -49,8 +57,6 @@ This repository contains the official implementation of the **PhysTwin** framewo
 </p>
 
 #### Upcoming Releases (Next Few Days)
-- **Material Visualization:** Visualize object materials post-optimization to facilitate material analysis from interactions.
-- **Material Transfer:** Provide a demo for transferring material properties from one PhysTwin to another object.
 - **Rigid Object Demo:** Demonstrate our framework on rigid object interactions, showcasing its capability for rigid object tracking from videos.
 
 #### Long-Term Plans
@@ -159,6 +165,19 @@ python visualize_force.py --case_name single_clift_cloth_1 --n_ctrl_parts 1
 python visualize_force.py --case_name double_stretch_sloth 
 ```
 The visualziation video is saved under `experiments` folder.
+
+### Material Visualization
+Experimental feature to visualize the approximated material from the constructed PhysTwin.
+```
+python visualize_material.py \
+--case_name [case_name]
+
+# Examples of usage:
+python visualize_material.py --case_name double_lift_cloth_1
+python visualize_material.py --case_name single_push_rope
+python visualize_material.py --case_name double_stretch_sloth
+```
+
 
 ### Multiple Objects Demos
 Try the experimental features for handling collisions among the multiple PhysTwins we construct.

@@ -16,6 +16,7 @@ import cv2
 from pynput import keyboard
 import pyrender
 import trimesh
+import matplotlib.pyplot as plt
 
 from gaussian_splatting.scene.gaussian_model import GaussianModel
 from gaussian_splatting.scene.cameras import Camera
@@ -1740,11 +1741,276 @@ class InvPhyTrainerWarp:
             )
 
             total_force = -spring_forces.sum(dim=0)
-            # total_force = spring_forces[0]
-            # import pdb
-            # pdb.set_trace()
-
         return total_force
+
+    def visualize_material(self, model_path, gs_path, relative_material=True):
+        # Load the model
+        logger.info(f"Load model from {model_path}")
+        checkpoint = torch.load(model_path, map_location=cfg.device)
+
+        spring_Y = checkpoint["spring_Y"]
+        collide_elas = checkpoint["collide_elas"]
+        collide_fric = checkpoint["collide_fric"]
+        collide_object_elas = checkpoint["collide_object_elas"]
+        collide_object_fric = checkpoint["collide_object_fric"]
+        num_object_springs = checkpoint["num_object_springs"]
+
+        assert (
+            len(spring_Y) == self.simulator.n_springs
+        ), "Check if the loaded checkpoint match the config file to connect the springs"
+
+        self.simulator.set_spring_Y(torch.log(spring_Y).detach().clone())
+        self.simulator.set_collide(
+            collide_elas.detach().clone(), collide_fric.detach().clone()
+        )
+        self.simulator.set_collide_object(
+            collide_object_elas.detach().clone(),
+            collide_object_fric.detach().clone(),
+        )
+
+        video_path = f"{cfg.base_dir}/material_visualization.mp4"
+
+        vis_cam_idx = 0
+        FPS = cfg.FPS
+        width, height = cfg.WH
+        intrinsic = cfg.intrinsics[vis_cam_idx]
+        w2c = cfg.w2cs[vis_cam_idx]
+
+        gaussians = GaussianModel(sh_degree=3)
+        gaussians.load_ply(gs_path)
+        gaussians = remove_gaussians_with_low_opacity(gaussians, 0.1)
+        gaussians.isotropic = True
+        current_pos = gaussians.get_xyz
+        current_rot = gaussians.get_rotation
+        use_white_background = True  # set to True for white background
+        bg_color = [1, 1, 1] if use_white_background else [0, 0, 0]
+        background = torch.tensor(bg_color, dtype=torch.float32, device=cfg.device)
+        view = self._create_gs_view(w2c, intrinsic, height, width)
+        prev_x = None
+        relations = None
+        weights = None
+
+        # Start to visualize the stuffs
+        logger.info("Visualizing the simulation")
+        # Visualize the whole simulation using current set of parameters in the physical simulator
+        frame_len = self.dataset.frame_len
+        self.simulator.set_init_state(
+            self.simulator.wp_init_vertices, self.simulator.wp_init_velocities
+        )
+        prev_x = wp.to_torch(
+            self.simulator.wp_states[0].wp_x, requires_grad=False
+        ).clone()
+
+        vis = o3d.visualization.Visualizer()
+        vis.create_window(visible=False, width=width, height=height)
+        fourcc = cv2.VideoWriter_fourcc(*"avc1")  # Codec for .mp4 file format
+        video_writer = cv2.VideoWriter(video_path, fourcc, FPS, (width, height))
+
+        frame_path = f"{cfg.overlay_path}/{vis_cam_idx}/0.png"
+        frame = cv2.imread(frame_path)
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+        results = render_gaussian(view, gaussians, None, background)
+        rendering = results["render"]  # (4, H, W)
+        image = rendering.permute(1, 2, 0).detach().cpu().numpy()
+
+        image = image.clip(0, 1)
+        if use_white_background:
+            image_mask = np.logical_and(
+                (image != 1.0).any(axis=2), image[:, :, 3] > 100 / 255
+            )
+        else:
+            image_mask = np.logical_and(
+                (image != 0.0).any(axis=2), image[:, :, 3] > 100 / 255
+            )
+        image[~image_mask, 3] = 0
+
+        alpha = image[..., 3:4]
+        rgb = image[..., :3] * 255
+        frame = alpha * rgb + (1 - alpha) * frame
+        frame = frame.astype(np.uint8)
+
+        # Add the material visualization
+        object_springs = self.init_springs[:num_object_springs]
+        material_field = torch.zeros((self.num_all_points, 3), device=cfg.device)
+        count_field = torch.zeros(
+            self.num_all_points, dtype=torch.int32, device=cfg.device
+        )
+        clamp_object_spring_Y = torch.clamp(
+            spring_Y[:num_object_springs], min=cfg.spring_Y_min, max=cfg.spring_Y_max
+        )
+        object_rest_lengths = self.init_rest_lengths[:num_object_springs]
+
+        # idx1 = object_springs[:, 0]
+        # idx2 = object_springs[:, 1]
+        # x1 = prev_x[idx1]
+        # x2 = prev_x[idx2]
+        # dis = x2 - x1
+        # dis_len = torch.norm(dis, dim=1)
+        # d = dis / torch.clamp(dis_len, min=1e-6)[:, None]
+        # # import pdb
+        # # pdb.set_trace()
+        # material_field.index_add_(
+        #     0,
+        #     idx1,
+        #     clamp_object_spring_Y[:, None] / object_rest_lengths[:, None] * d,
+        # )
+        # material_field.index_add_(
+        #     0,
+        #     idx2,
+        #     clamp_object_spring_Y[:, None] / object_rest_lengths[:, None] * d,
+        # )
+        # material_field = torch.norm(material_field, dim=1)
+        # import pdb
+        # pdb.set_trace()
+        # count_field.index_add_(
+        #     0, idx1, torch.ones_like(idx1, dtype=torch.int32, device=cfg.device)
+        # )
+        # count_field.index_add_(
+        #     0, idx2, torch.ones_like(idx2, dtype=torch.int32, device=cfg.device)
+        # )
+        # material_field /= count_field
+        # if relative_material:
+        #     material_field_normalized = (material_field - material_field.min()) / (
+        #         material_field.max() - material_field.min()
+        #     )
+        # else:
+        #     material_field_normalized = (material_field - cfg.spring_Y_min) / (
+        #         cfg.spring_Y_max - cfg.spring_Y_min
+        #     )
+        # rainbow_colors = plt.cm.rainbow(material_field_normalized.cpu().numpy())[:, :3]
+
+        stiffness_map = compute_effective_stiffness(
+            points=prev_x,
+            springs=object_springs,
+            Y=clamp_object_spring_Y,
+            rest_lengths=object_rest_lengths,
+            device=cfg.device,
+        )
+        normed = (stiffness_map - stiffness_map.min()) / (
+            stiffness_map.max() - stiffness_map.min()
+        )
+        rainbow_colors = plt.cm.rainbow(normed.cpu().numpy())[:, :3]
+
+        object_pcd = o3d.geometry.PointCloud()
+        object_pcd.points = o3d.utility.Vector3dVector(prev_x.cpu().numpy())
+        object_pcd.colors = o3d.utility.Vector3dVector(rainbow_colors)
+        vis.add_geometry(object_pcd)
+
+        # Adjust the viewpoint
+        view_control = vis.get_view_control()
+        camera_params = o3d.camera.PinholeCameraParameters()
+        intrinsic_parameter = o3d.camera.PinholeCameraIntrinsic(
+            width, height, intrinsic
+        )
+        camera_params.intrinsic = intrinsic_parameter
+        camera_params.extrinsic = w2c
+        view_control.convert_from_pinhole_camera_parameters(
+            camera_params, allow_arbitrary=True
+        )
+
+        material_image = np.asarray(vis.capture_screen_float_buffer(do_render=True))
+        material_image = (material_image * 255).astype(np.uint8)
+        material_vis_mask = np.all(material_image == [255, 255, 255], axis=-1)
+        frame[~material_vis_mask] = material_image[~material_vis_mask]
+
+        frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+        cv2.imshow("Interactive Playground", frame)
+        cv2.waitKey(1)
+        video_writer.write(frame)
+
+        for i in tqdm(range(1, frame_len)):
+            if cfg.data_type == "real":
+                self.simulator.set_controller_target(i, pure_inference=True)
+            if self.simulator.object_collision_flag:
+                self.simulator.update_collision_graph()
+
+            wp.capture_launch(self.simulator.forward_graph)
+            x = wp.to_torch(self.simulator.wp_states[-1].wp_x, requires_grad=False)
+            # Set the intial state for the next step
+            self.simulator.set_init_state(
+                self.simulator.wp_states[-1].wp_x,
+                self.simulator.wp_states[-1].wp_v,
+            )
+
+            torch.cuda.synchronize()
+
+            with torch.no_grad():
+                # Do LBS on the gaussian kernels
+                prev_particle_pos = prev_x
+                cur_particle_pos = x
+                if relations is None:
+                    relations = get_topk_indices(
+                        prev_x, K=16
+                    )  # only computed in the first iteration
+
+                if weights is None:
+                    weights, weights_indices = knn_weights_sparse(
+                        prev_particle_pos, current_pos, K=16
+                    )  # only computed in the first iteration
+
+                weights = calc_weights_vals_from_indices(
+                    prev_particle_pos, current_pos, weights_indices
+                )
+
+                current_pos, current_rot, _ = interpolate_motions_speedup(
+                    bones=prev_particle_pos,
+                    motions=cur_particle_pos - prev_particle_pos,
+                    relations=relations,
+                    weights=weights,
+                    weights_indices=weights_indices,
+                    xyz=current_pos,
+                    quat=current_rot,
+                )
+
+                # update gaussians with the new positions and rotations
+                gaussians._xyz = current_pos
+                gaussians._rotation = current_rot
+
+            prev_x = x.clone()
+
+            frame_path = f"{cfg.overlay_path}/{vis_cam_idx}/{i}.png"
+            frame = cv2.imread(frame_path)
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+            results = render_gaussian(view, gaussians, None, background)
+            rendering = results["render"]  # (4, H, W)
+            image = rendering.permute(1, 2, 0).detach().cpu().numpy()
+
+            image = image.clip(0, 1)
+            if use_white_background:
+                image_mask = np.logical_and(
+                    (image != 1.0).any(axis=2), image[:, :, 3] > 100 / 255
+                )
+            else:
+                image_mask = np.logical_and(
+                    (image != 0.0).any(axis=2), image[:, :, 3] > 100 / 255
+                )
+            image[~image_mask, 3] = 0
+
+            alpha = image[..., 3:4]
+            rgb = image[..., :3] * 255
+            frame = alpha * rgb + (1 - alpha) * frame
+            frame = frame.astype(np.uint8)
+
+            # Update the object pcd
+            object_pcd.points = o3d.utility.Vector3dVector(prev_x.cpu().numpy())
+            vis.update_geometry(object_pcd)
+
+            vis.poll_events()
+            vis.update_renderer()
+
+            force_image = np.asarray(vis.capture_screen_float_buffer(do_render=True))
+            force_image = (force_image * 255).astype(np.uint8)
+            force_vis_mask = np.all(force_image == [255, 255, 255], axis=-1)
+            frame[~force_vis_mask] = force_image[~force_vis_mask]
+            frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+            video_writer.write(frame)
+
+            cv2.imshow("Interactive Playground", frame)
+            cv2.waitKey(1)
+        vis.destroy_window()
+        video_writer.release()
 
 
 def get_simple_shadow(
@@ -1846,3 +2112,70 @@ def _caculate_align_mat(pVec_Arr):
         )
     qTrans_Mat *= scale
     return qTrans_Mat
+
+
+def construct_stiffness_matrix_sparse(
+    springs, positions, spring_Y, rest_lengths, num_points, device
+):
+    # springs: (N_springs, 2)
+    # positions: (N_points, 3)
+    # spring_Y: (N_springs,)
+    # rest_lengths: (N_springs,)
+
+    i = springs[:, 0]
+    j = springs[:, 1]
+
+    x_i = positions[i]  # (N, 3)
+    x_j = positions[j]
+    d = x_j - x_i  # (N, 3)
+    d_norm = torch.norm(d, dim=1, keepdim=True) + 1e-8
+    d_hat = d / d_norm  # (N, 3)
+
+    coeff = spring_Y / rest_lengths  # (N,)
+    k_blocks = coeff[:, None, None] * (
+        d_hat[:, :, None] @ d_hat[:, None, :]
+    )  # (N, 3, 3)
+
+    indices = []
+    values = []
+
+    for shift_i, shift_j, sign in [(0, 0, 1), (0, 1, -1), (1, 0, -1), (1, 1, 1)]:
+        node_i = springs[:, shift_i]
+        node_j = springs[:, shift_j]
+
+        for a in range(3):
+            for b in range(3):
+                row_idx = 3 * node_i + a
+                col_idx = 3 * node_j + b
+                val = sign * k_blocks[:, a, b]
+                indices.append(torch.stack([row_idx, col_idx], dim=0))  # (2, N)
+                values.append(val)
+
+    indices = torch.cat(indices, dim=1)  # (2, total_nonzero)
+    values = torch.cat(values, dim=0)  # (total_nonzero,)
+    size = (3 * num_points, 3 * num_points)
+    K_sparse = torch.sparse_coo_tensor(indices, values, size, device=device).coalesce()
+    return K_sparse
+
+
+def compute_effective_stiffness(points, springs, Y, rest_lengths, device):
+    """
+    Compute effective stiffness for each point based on stiffness matrix diagonal blocks.
+    Return: (N_points,) tensor of Frobenius norm of 3x3 diagonal blocks in stiffness matrix.
+    """
+    num_points = points.shape[0]
+    K_sparse = construct_stiffness_matrix_sparse(
+        springs=springs,
+        positions=points,
+        spring_Y=Y,
+        rest_lengths=rest_lengths,
+        num_points=num_points,
+        device=device,
+    )
+
+    K_dense = K_sparse.to_dense()
+    stiffness_map = torch.zeros(num_points, device=device)
+    for i in range(num_points):
+        block = K_dense[3 * i : 3 * i + 3, 3 * i : 3 * i + 3]
+        stiffness_map[i] = torch.norm(block, p="fro")
+    return stiffness_map
