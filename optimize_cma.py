@@ -1,5 +1,4 @@
 # The first stage to optimize the sparse parameters using CMA-ES
-from h11 import Data
 from qqtt import OptimizerCMA
 from qqtt.utils import logger, cfg
 from qqtt.utils.logger import StreamToLogger, logging
