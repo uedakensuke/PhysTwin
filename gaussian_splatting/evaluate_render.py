@@ -10,6 +10,7 @@ import torch
 import torchvision.transforms as transforms
 import numpy as np
 
+DATA_DIR = "../data"
 
 def img2tensor(img):
     img = np.array(img, dtype=np.float32) / 255.0  # Normalize to [0,1]
@@ -24,10 +25,10 @@ def compute_iou(mask1, mask2):
 
 
 if __name__ == "__main__":
-    render_path = './data/render_eval_data'
-    human_mask_path = "./data/different_types_human_mask"
-    root_data_dir = './data/gaussian_data'
-    output_dir = './gaussian_output_dynamic'
+    render_path = f'{DATA_DIR}/data/render_eval_data'
+    human_mask_path = f"{DATA_DIR}/data/different_types_human_mask"
+    root_data_dir = f'{DATA_DIR}/data/gaussian_data'
+    output_dir = f'{DATA_DIR}/gaussian_output_dynamic'
 
     log_dir = './results'
     os.makedirs(log_dir, exist_ok=True)

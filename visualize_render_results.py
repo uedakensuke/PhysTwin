@@ -3,13 +3,15 @@ import json
 import numpy as np
 import cv2
 
-base_path = "./data/different_types"
-prediction_dir = "./gaussian_output_dynamic"
+DATA_DIR = "../data"
+
+base_path = f"{DATA_DIR}/data/different_types"
+prediction_dir = f"{DATA_DIR}/gaussian_output_dynamic"
 human_mask_path = (
-    "./data/different_types_human_mask"
+    f"{DATA_DIR}/data/different_types_human_mask"
 )
 object_mask_path = (
-    "./data/render_eval_data"
+    f"{DATA_DIR}/data/render_eval_data"
 )
 
 height, width = 480, 848

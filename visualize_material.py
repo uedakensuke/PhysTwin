@@ -10,6 +10,7 @@ import os
 import pickle
 import json
 
+DATA_DIR = "../data"
 
 def set_all_seeds(seed):
     random.seed(seed)
@@ -31,12 +32,12 @@ if __name__ == "__main__":
     parser.add_argument(
         "--base_path",
         type=str,
-        default="./data/different_types",
+        default=f"{DATA_DIR}/data/different_types",
     )
     parser.add_argument(
         "--gaussian_path",
         type=str,
-        default="./gaussian_output",
+        default=f"{DATA_DIR}/gaussian_output",
     )
     parser.add_argument("--case_name", type=str, default="double_stretch_sloth")
     args = parser.parse_args()
@@ -49,10 +50,10 @@ if __name__ == "__main__":
     else:
         cfg.load_from_yaml("configs/real.yaml")
 
-    base_dir = f"./experiments/{case_name}"
+    base_dir = f"{DATA_DIR}/experiments/{case_name}"
 
     # Read the first-satage optimized parameters to set the indifferentiable parameters
-    optimal_path = f"./experiments_optimization/{case_name}/optimal_params.pkl"
+    optimal_path = f"{DATA_DIR}/experiments_optimization/{case_name}/optimal_params.pkl"
     logger.info(f"Load optimal parameters from: {optimal_path}")
     assert os.path.exists(
         optimal_path
@@ -83,5 +84,5 @@ if __name__ == "__main__":
         pure_inference_mode=True,
     )
 
-    best_model_path = glob.glob(f"experiments/{case_name}/train/best_*.pth")[0]
+    best_model_path = glob.glob(f"{DATA_DIR}/experiments/{case_name}/train/best_*.pth")[0]
     trainer.visualize_material(best_model_path, gaussians_path)

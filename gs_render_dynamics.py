@@ -21,6 +21,8 @@ from argparse import ArgumentParser
 from gaussian_splatting.arguments import ModelParams, PipelineParams, get_combined_args
 from gaussian_splatting.gaussian_renderer import GaussianModel
 
+DATA_DIR = "../data"
+
 try:
     from diff_gaussian_rasterization import SparseGaussianAdam
 
@@ -115,7 +117,7 @@ def render_sets(
     name: str = "dynamic",
 ):
     with torch.no_grad():
-        output_path = "./gaussian_output_dynamic"
+        output_path = f"{DATA_DIR}/gaussian_output_dynamic"
 
         bg_color = [1, 1, 1] if dataset.white_background else [0, 0, 0]
         background = torch.tensor(bg_color, dtype=torch.float32, device="cuda")
@@ -135,7 +137,7 @@ def render_sets(
 
         # rollout
         exp_name = dataset.source_path.split("/")[-1]
-        ctrl_pts_path = f"./experiments/{exp_name}/inference.pkl"
+        ctrl_pts_path = f"{DATA_DIR}/experiments/{exp_name}/inference.pkl"
         with open(ctrl_pts_path, "rb") as f:
             ctrl_pts = pickle.load(f)  # (n_frames, n_ctrl_pts, 3) ndarray
         ctrl_pts = torch.tensor(ctrl_pts, dtype=torch.float32, device="cuda")

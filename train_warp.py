@@ -9,6 +9,7 @@ import os
 import pickle
 import json
 
+DATA_DIR = "../data"
 
 def set_all_seeds(seed):
     random.seed(seed)
@@ -41,10 +42,10 @@ if __name__ == "__main__":
 
     print(f"[DATA TYPE]: {cfg.data_type}")
 
-    base_dir = f"experiments/{case_name}"
+    base_dir = f"{DATA_DIR}/experiments/{case_name}"
 
     # Read the first-satage optimized parameters
-    optimal_path = f"experiments_optimization/{case_name}/optimal_params.pkl"
+    optimal_path = f"{DATA_DIR}/experiments_optimization/{case_name}/optimal_params.pkl"
     assert os.path.exists(
         optimal_path
     ), f"{case_name}: Optimal parameters not found: {optimal_path}"

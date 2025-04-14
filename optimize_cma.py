@@ -1,4 +1,5 @@
 # The first stage to optimize the sparse parameters using CMA-ES
+from h11 import Data
 from qqtt import OptimizerCMA
 from qqtt.utils import logger, cfg
 from qqtt.utils.logger import StreamToLogger, logging
@@ -10,6 +11,7 @@ import pickle
 import json
 from argparse import ArgumentParser
 
+DATA_DIR = "../data"
 
 def set_all_seeds(seed):
     random.seed(seed)
@@ -45,7 +47,7 @@ if __name__ == "__main__":
     else:
         cfg.load_from_yaml("configs/real.yaml")
 
-    base_dir = f"experiments_optimization/{case_name}"
+    base_dir = f"{DATA_DIR}/experiments_optimization/{case_name}"
 
     # Set the intrinsic and extrinsic parameters for visualization
     with open(f"{base_path}/{case_name}/calibrate.pkl", "rb") as f:

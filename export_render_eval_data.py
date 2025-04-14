@@ -2,8 +2,10 @@ import os
 import csv
 import json
 
-base_path = "./data/different_types"
-output_path = "./data/render_eval_data"
+DATA_DIR = "../data"
+
+base_path = f"{DATA_DIR}/data/different_types"
+output_path = f"{DATA_DIR}/data/render_eval_data"
 CONTROLLER_NAME = "hand"
 
 
@@ -14,7 +16,7 @@ def existDir(dir_path):
 
 existDir(output_path)
 
-with open("data_config.csv", newline="", encoding="utf-8") as csvfile:
+with open(f"{DATA_DIR}/data_config.csv", newline="", encoding="utf-8") as csvfile:
     reader = csv.reader(csvfile)
     for row in reader:
         case_name = row[0]

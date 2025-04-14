@@ -5,11 +5,13 @@ import logging
 import json
 import glob
 
+DATA_DIR = "../data"
+
 parser = ArgumentParser()
 parser.add_argument(
     "--base_path",
     type=str,
-    default="./data/different_types",
+    default=f"{DATA_DIR}/data/different_types",
 )
 parser.add_argument("--case_name", type=str, required=True)
 # The category of the object used for segmentation

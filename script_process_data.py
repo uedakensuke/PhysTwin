@@ -1,11 +1,13 @@
 import os
 import csv
 
-base_path = "./data/different_types"
+DATA_DIR = "../data"
+
+base_path = f"{DATA_DIR}/data/different_types"
 
 os.system("rm -f timer.log")
 
-with open("data_config.csv", newline="", encoding="utf-8") as csvfile:
+with open(f"{DATA_DIR}/data_config.csv", newline="", encoding="utf-8") as csvfile:
     reader = csv.reader(csvfile)
     for row in reader:
         case_name = row[0]
