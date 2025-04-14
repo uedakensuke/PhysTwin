@@ -5,7 +5,7 @@ import pickle
 import numpy as np
 import open3d as o3d
 
-DATA_DIR = "../data"
+DATA_DIR = "../mount/data"
 
 base_path = f"{DATA_DIR}/data/different_types"
 output_path = f"{DATA_DIR}/data/gaussian_data"

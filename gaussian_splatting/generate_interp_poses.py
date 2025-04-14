@@ -3,7 +3,7 @@ import scipy.interpolate
 import pickle
 import os
 
-DATA_DIR = "../data"
+DATA_DIR = "../mount/data"
 
 def normalize(v):
     """Normalize a vector."""

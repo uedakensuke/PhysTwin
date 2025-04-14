@@ -1,5 +1,5 @@
-output_dir="../data/gaussian_output"
-output_video_dir="../data/gaussian_output_video"
+output_dir="../mount/data/gaussian_output"
+output_video_dir="../mount/data/gaussian_output_video"
 # scenes=("double_lift_cloth_1" "double_lift_cloth_3" "double_lift_sloth" "double_lift_zebra"
 #         "double_stretch_sloth" "double_stretch_zebra"
 #         "rope_double_hand"

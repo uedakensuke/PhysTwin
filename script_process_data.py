@@ -1,7 +1,7 @@
 import os
 import csv
 
-DATA_DIR = "../data"
+DATA_DIR = "../mount/data"
 
 base_path = f"{DATA_DIR}/data/different_types"
 

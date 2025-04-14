@@ -21,7 +21,7 @@ from argparse import ArgumentParser
 from gaussian_splatting.arguments import ModelParams, PipelineParams, get_combined_args
 from gaussian_splatting.gaussian_renderer import GaussianModel
 
-DATA_DIR = "../data"
+DATA_DIR = "../mount/data"
 
 try:
     from diff_gaussian_rasterization import SparseGaussianAdam

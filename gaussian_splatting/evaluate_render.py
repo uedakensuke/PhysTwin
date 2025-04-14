@@ -10,7 +10,7 @@ import torch
 import torchvision.transforms as transforms
 import numpy as np
 
-DATA_DIR = "../data"
+DATA_DIR = "../mount/data"
 
 def img2tensor(img):
     img = np.array(img, dtype=np.float32) / 255.0  # Normalize to [0,1]

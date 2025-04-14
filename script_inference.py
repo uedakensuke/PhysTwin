@@ -2,7 +2,7 @@ import glob
 import os
 import json
 
-DATA_DIR = "../data"
+DATA_DIR = "../mount/data"
 
 base_path = f"{DATA_DIR}/data/different_types"
 dir_names = glob.glob(f"{DATA_DIR}/experiments/*")

@@ -11,7 +11,7 @@ import pickle
 import json
 from argparse import ArgumentParser
 
-DATA_DIR = "../data"
+DATA_DIR = "../mount/data"
 
 def set_all_seeds(seed):
     random.seed(seed)

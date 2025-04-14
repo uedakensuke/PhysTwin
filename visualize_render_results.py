@@ -3,7 +3,7 @@ import json
 import numpy as np
 import cv2
 
-DATA_DIR = "../data"
+DATA_DIR = "../mount/data"
 
 base_path = f"{DATA_DIR}/data/different_types"
 prediction_dir = f"{DATA_DIR}/gaussian_output_dynamic"

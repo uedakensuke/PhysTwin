@@ -1,7 +1,7 @@
 import os
 import glob
 
-DATA_DIR = "../data"
+DATA_DIR = "../mount/data"
 
 base_path = f"{DATA_DIR}/data/different_types"
 output_path = f"{DATA_DIR}/data/different_types_human_mask"

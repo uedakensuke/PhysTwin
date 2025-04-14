@@ -5,7 +5,7 @@ import logging
 import json
 import glob
 
-DATA_DIR = "../data"
+DATA_DIR = "../mount/data"
 
 parser = ArgumentParser()
 parser.add_argument(

@@ -1,4 +1,4 @@
-output_dir="../data/gaussian_output_dynamic"
+output_dir="../mount/data/gaussian_output_dynamic"
 
 # views=("0" "1" "2")
 views=("0")
@@ -20,8 +20,8 @@ exp_name='init=hybrid_iso=True_ldepth=0.001_lnormal=0.0_laniso_0.0_lseg=1.0'
 for scene_name in "${scenes[@]}"; do
 
     python gs_render_dynamics.py \
-        -s ../data/data/gaussian_data/${scene_name} \
-        -m ../data/gaussian_output/${scene_name}/${exp_name} \
+        -s ../mount/data/data/gaussian_data/${scene_name} \
+        -m ../mount/data/gaussian_output/${scene_name}/${exp_name} \
         --name ${scene_name} \
         --white_background
 

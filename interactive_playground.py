@@ -10,7 +10,7 @@ import os
 import pickle
 import json
 
-DATA_DIR = "../data"
+DATA_DIR = "../mount/data"
 
 def set_all_seeds(seed):
     random.seed(seed)

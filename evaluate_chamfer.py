@@ -7,7 +7,7 @@ import numpy as np
 import os
 from pytorch3d.loss import chamfer_distance
 
-DATA_DIR = "../data"
+DATA_DIR = "../mount/data"
 
 prediction_dir = f"{DATA_DIR}/experiments"
 base_path = f"{DATA_DIR}/data/different_types"

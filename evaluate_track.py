@@ -5,7 +5,7 @@ import json
 import numpy as np
 from scipy.spatial import KDTree
 
-DATA_DIR = "../data"
+DATA_DIR = "../mount/data"
 
 base_path = f"{DATA_DIR}/data/different_types"
 prediction_path = f"{DATA_DIR}/experiments"

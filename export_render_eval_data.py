@@ -2,7 +2,7 @@ import os
 import csv
 import json
 
-DATA_DIR = "../data"
+DATA_DIR = "../mount/data"
 
 base_path = f"{DATA_DIR}/data/different_types"
 output_path = f"{DATA_DIR}/data/render_eval_data"
