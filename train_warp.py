@@ -9,7 +9,16 @@ import os
 import pickle
 import json
 
-WORKSPACE_DIR = "../mount/ws"
+DIR = os.path.dirname(__file__)
+WORKSPACE_DIR = f"{DIR}/../mount/ws"
+
+def get_train_frame(base_path,case_name):
+    # Read the train test split
+    with open(f"{base_path}/{case_name}/split.json", "r") as f:
+        split = json.load(f)
+
+    train_frame = split["train"][1]
+    return train_frame
 
 def set_all_seeds(seed):
     random.seed(seed)
@@ -33,12 +42,12 @@ if __name__ == "__main__":
 
     base_path = args.base_path
     case_name = args.case_name
-    train_frame = args.train_frame
+    train_frame = get_train_frame(base_path, case_name)
 
     if "cloth" in case_name or "package" in case_name:
-        cfg.load_from_yaml("configs/cloth.yaml")
+        cfg.load_from_yaml(f"{DIR}/configs/cloth.yaml")
     else:
-        cfg.load_from_yaml("configs/real.yaml")
+        cfg.load_from_yaml(f"{DIR}/configs/real.yaml")
 
     print(f"[DATA TYPE]: {cfg.data_type}")
 

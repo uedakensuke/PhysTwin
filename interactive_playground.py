@@ -43,7 +43,7 @@ if __name__ == "__main__":
         type=str,
         default=f"{WORKSPACE_DIR}/data/bg.png",
     )
-    parser.add_argument("--case_name", type=str, default="double_lift_cloth_3")
+    parser.add_argument("--case_name", type=str, default="double_stretch_sloth")
     parser.add_argument("--n_ctrl_parts", type=int, default=2)
     parser.add_argument(
         "--inv_ctrl", action="store_true", help="invert horizontal control direction"
