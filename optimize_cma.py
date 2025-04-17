@@ -55,9 +55,9 @@ if __name__ == "__main__":
     max_iter = args.max_iter
 
     if "cloth" in case_name or "package" in case_name:
-        cfg.load_from_yaml("configs/cloth.yaml")
+        cfg.load_from_yaml(f"{DIR}/configs/cloth.yaml")
     else:
-        cfg.load_from_yaml("configs/real.yaml")
+        cfg.load_from_yaml(f"{DIR}/configs/real.yaml")
 
     base_dir = f"{WORKSPACE_DIR}/experiments_optimization/{case_name}"
 
