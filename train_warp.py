@@ -35,9 +35,12 @@ set_all_seeds(seed)
 
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument("--base_path", type=str, required=True)
+    parser.add_argument(
+        "--base_path",
+        type=str,
+        default=f"{WORKSPACE_DIR}/data/different_types",
+    )
     parser.add_argument("--case_name", type=str, required=True)
-    parser.add_argument("--train_frame", type=int, required=True)
     args = parser.parse_args()
 
     base_path = args.base_path

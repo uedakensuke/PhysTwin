@@ -40,7 +40,11 @@ sys.stderr = StreamToLogger(logger, logging.ERROR)
 
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument("--base_path", type=str, required=True)
+    parser.add_argument(
+        "--base_path",
+        type=str,
+        default=f"{WORKSPACE_DIR}/data/different_types",
+    )
     parser.add_argument("--case_name", type=str, required=True)
     parser.add_argument("--max_iter", type=int, default=20)
     args = parser.parse_args()
