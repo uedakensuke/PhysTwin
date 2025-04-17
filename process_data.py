@@ -5,13 +5,13 @@ import logging
 import json
 import glob
 
-DATA_DIR = "../mount/data"
+WORKSPACE_DIR = "../mount/ws"
 
 parser = ArgumentParser()
 parser.add_argument(
     "--base_path",
     type=str,
-    default=f"{DATA_DIR}/data/different_types",
+    default=f"{WORKSPACE_DIR}/data/different_types",
 )
 parser.add_argument("--case_name", type=str, required=True)
 # The category of the object used for segmentation

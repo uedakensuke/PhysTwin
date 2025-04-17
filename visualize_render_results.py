@@ -3,15 +3,15 @@ import json
 import numpy as np
 import cv2
 
-DATA_DIR = "../mount/data"
+WORKSPACE_DIR = "../mount/ws"
 
-base_path = f"{DATA_DIR}/data/different_types"
-prediction_dir = f"{DATA_DIR}/gaussian_output_dynamic"
+base_path = f"{WORKSPACE_DIR}/data/different_types"
+prediction_dir = f"{WORKSPACE_DIR}/gaussian_output_dynamic"
 human_mask_path = (
-    f"{DATA_DIR}/data/different_types_human_mask"
+    f"{WORKSPACE_DIR}/data/different_types_human_mask"
 )
 object_mask_path = (
-    f"{DATA_DIR}/data/render_eval_data"
+    f"{WORKSPACE_DIR}/data/render_eval_data"
 )
 
 height, width = 480, 848

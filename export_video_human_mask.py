@@ -1,10 +1,10 @@
 import os
 import glob
 
-DATA_DIR = "../mount/data"
+WORKSPACE_DIR = "../mount/ws"
 
-base_path = f"{DATA_DIR}/data/different_types"
-output_path = f"{DATA_DIR}/data/different_types_human_mask"
+base_path = f"{WORKSPACE_DIR}/data/different_types"
+output_path = f"{WORKSPACE_DIR}/data/different_types_human_mask"
 
 def existDir(dir_path):
     if not os.path.exists(dir_path):

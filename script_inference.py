@@ -2,10 +2,10 @@ import glob
 import os
 import json
 
-DATA_DIR = "../mount/data"
+WORKSPACE_DIR = "../mount/ws"
 
-base_path = f"{DATA_DIR}/data/different_types"
-dir_names = glob.glob(f"{DATA_DIR}/experiments/*")
+base_path = f"{WORKSPACE_DIR}/data/different_types"
+dir_names = glob.glob(f"{WORKSPACE_DIR}/experiments/*")
 for dir_name in dir_names:
     case_name = dir_name.split("/")[-1]
 

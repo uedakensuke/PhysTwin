@@ -7,11 +7,11 @@ import numpy as np
 import os
 from pytorch3d.loss import chamfer_distance
 
-DATA_DIR = "../mount/data"
+WORKSPACE_DIR = "../mount/ws"
 
-prediction_dir = f"{DATA_DIR}/experiments"
-base_path = f"{DATA_DIR}/data/different_types"
-output_file = f"{DATA_DIR}/results/final_results.csv"
+prediction_dir = f"{WORKSPACE_DIR}/experiments"
+base_path = f"{WORKSPACE_DIR}/data/different_types"
+output_file = f"{WORKSPACE_DIR}/results/final_results.csv"
 
 if not os.path.exists("results"):
     os.makedirs("results")

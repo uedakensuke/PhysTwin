@@ -10,7 +10,7 @@ import os
 import pickle
 import json
 
-DATA_DIR = "../mount/data"
+WORKSPACE_DIR = "../mount/ws"
 
 def set_all_seeds(seed):
     random.seed(seed)
@@ -41,10 +41,10 @@ if __name__ == "__main__":
 
     logger.info(f"[DATA TYPE]: {cfg.data_type}")
 
-    base_dir = f"{DATA_DIR}/experiments/{case_name}"
+    base_dir = f"{WORKSPACE_DIR}/experiments/{case_name}"
 
     # Read the first-satage optimized parameters to set the indifferentiable parameters
-    optimal_path = f"{DATA_DIR}/experiments_optimization/{case_name}/optimal_params.pkl"
+    optimal_path = f"{WORKSPACE_DIR}/experiments_optimization/{case_name}/optimal_params.pkl"
     logger.info(f"Load optimal parameters from: {optimal_path}")
     assert os.path.exists(
         optimal_path

@@ -5,11 +5,11 @@ import json
 import numpy as np
 from scipy.spatial import KDTree
 
-DATA_DIR = "../mount/data"
+WORKSPACE_DIR = "../mount/ws"
 
-base_path = f"{DATA_DIR}/data/different_types"
-prediction_path = f"{DATA_DIR}/experiments"
-output_file = f"{DATA_DIR}/results/final_track.csv"
+base_path = f"{WORKSPACE_DIR}/data/different_types"
+prediction_path = f"{WORKSPACE_DIR}/experiments"
+output_file = f"{WORKSPACE_DIR}/results/final_track.csv"
 
 
 def evaluate_prediction(start_frame, end_frame, vertices, gt_track_3d, idx, mask):

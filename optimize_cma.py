@@ -10,7 +10,7 @@ import pickle
 import json
 from argparse import ArgumentParser
 
-DATA_DIR = "../mount/data"
+WORKSPACE_DIR = "../mount/ws"
 
 def set_all_seeds(seed):
     random.seed(seed)
@@ -46,7 +46,7 @@ if __name__ == "__main__":
     else:
         cfg.load_from_yaml("configs/real.yaml")
 
-    base_dir = f"{DATA_DIR}/experiments_optimization/{case_name}"
+    base_dir = f"{WORKSPACE_DIR}/experiments_optimization/{case_name}"
 
     # Set the intrinsic and extrinsic parameters for visualization
     with open(f"{base_path}/{case_name}/calibrate.pkl", "rb") as f:
