@@ -10,7 +10,8 @@ import os
 import pickle
 import json
 
-WORKSPACE_DIR = "../mount/ws"
+DIR = os.path.dirname(__file__)
+WORKSPACE_DIR = f"{DIR}/../mount/ws"
 
 def set_all_seeds(seed):
     random.seed(seed)
@@ -27,7 +28,11 @@ set_all_seeds(seed)
 
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument("--base_path", type=str, required=True)
+    parser.add_argument(
+        "--base_path",
+        type=str,
+        default=f"{WORKSPACE_DIR}/data/different_types",
+    )
     parser.add_argument("--case_name", type=str, required=True)
     args = parser.parse_args()
 
@@ -35,9 +40,9 @@ if __name__ == "__main__":
     case_name = args.case_name
 
     if "cloth" in case_name or "package" in case_name:
-        cfg.load_from_yaml("configs/cloth.yaml")
+        cfg.load_from_yaml(f"{DIR}/configs/cloth.yaml")
     else:
-        cfg.load_from_yaml("configs/real.yaml")
+        cfg.load_from_yaml(f"{DIR}/configs/real.yaml")
 
     logger.info(f"[DATA TYPE]: {cfg.data_type}")
 
