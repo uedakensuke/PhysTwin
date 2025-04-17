@@ -2,6 +2,7 @@
 from qqtt import OptimizerCMA
 from qqtt.utils import logger, cfg
 from qqtt.utils.logger import StreamToLogger, logging
+import os
 import random
 import numpy as np
 import sys
@@ -10,7 +11,16 @@ import pickle
 import json
 from argparse import ArgumentParser
 
-WORKSPACE_DIR = "../mount/ws"
+DIR = os.path.dirname(__file__)
+WORKSPACE_DIR = f"{DIR}/../mount/ws"
+
+def get_train_frame(base_path,case_name):
+    # Read the train test split
+    with open(f"{base_path}/{case_name}/split.json", "r") as f:
+        split = json.load(f)
+
+    train_frame = split["train"][1]
+    return train_frame
 
 def set_all_seeds(seed):
     random.seed(seed)
@@ -32,13 +42,12 @@ if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("--base_path", type=str, required=True)
     parser.add_argument("--case_name", type=str, required=True)
-    parser.add_argument("--train_frame", type=int, required=True)
     parser.add_argument("--max_iter", type=int, default=20)
     args = parser.parse_args()
 
     base_path = args.base_path
     case_name = args.case_name
-    train_frame = args.train_frame
+    train_frame = get_train_frame(base_path, case_name)
     max_iter = args.max_iter
 
     if "cloth" in case_name or "package" in case_name:
