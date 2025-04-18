@@ -25,7 +25,7 @@ seed = 42
 set_all_seeds(seed)
 
 if __name__ == "__main__":
-    cfg.load_from_yaml("configs/real.yaml")
+    cfg.load_from_yaml(f"{DIR}/configs/real.yaml")
 
     parser = ArgumentParser()
     parser.add_argument("--base_path", type=str, required=True)
