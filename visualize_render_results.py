@@ -3,12 +3,6 @@ import numpy as np
 import cv2
 from argparse import ArgumentParser
 
-
-# prediction_dir = f"{WORKSPACE_DIR}/gaussian_output_dynamic"
-# object_mask_path = (
-#     f"{WORKSPACE_DIR}/data/render_eval_data"
-# )
-
 height, width = 480, 848
 FPS = 30
 alpha = 0.7
@@ -17,14 +11,19 @@ if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("--base_path", type=str, required=True)
     parser.add_argument("--human_mask_path", type=str, required=True)
-    parser.add_argument("--out_path", type=str, required=True)
-    parser.add_argument("--case_name", type=str, default="double_lift_cloth_3")
+    parser.add_argument("--inference_path", type=str, required=True)
+    parser.add_argument("--eval_path", type=str, required=True)
+    parser.add_argument("--case_name", type=str, required=True)
     args = parser.parse_args()
 
     base_path = args.base_path
     human_mask_path = args.human_mask_path
-    out_path = args.out_path
+    inference_path = args.inference_path
+    eval_path = args.eval_path
     case_name = args.case_name
+
+    dynamic_scene_dir=f"{inference_path}/{case_name}/dynamic" #gaussian_output_dynamicから変更
+    object_mask_dir = f"{eval_path}/{case_name}/render_eval_data"
 
     with open(f"{base_path}/{case_name}/split.json", "r") as f:
         split = json.load(f)
@@ -35,20 +34,20 @@ if __name__ == "__main__":
         # Process each camera
         fourcc = cv2.VideoWriter_fourcc(*"avc1")  # Codec for .mp4 file format
         video_writer = cv2.VideoWriter(
-            f"{prediction_dir}/{case_name}/{i}_integrate.mp4",
+            f"{dynamic_scene_dir}/{i}_integrate.mp4",
             fourcc,
             FPS,
             (width, height),
         )
 
         for frame_idx in range(frame_len):
-            render_path = f"{prediction_dir}/{case_name}/{i}/{frame_idx:05d}.png"
+            render_path = f"{dynamic_scene_dir}/{i}/{frame_idx:05d}.png"
             origin_image_path = f"{base_path}/{case_name}/color/{i}/{frame_idx}.png"
             human_mask_image_path = (
                 f"{human_mask_path}/{case_name}/mask/{i}/0/{frame_idx}.png"
             )
             object_image_path = (
-                f"{object_mask_path}/{case_name}/mask/{i}/{frame_idx}.png"
+                f"{object_mask_dir}/mask/{i}/{frame_idx}.png"
             )
 
             render_img = cv2.imread(render_path, cv2.IMREAD_UNCHANGED)

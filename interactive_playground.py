@@ -32,8 +32,8 @@ if __name__ == "__main__":
     parser.add_argument("--physics_dense_path", type=str, required=True)
     parser.add_argument("--gaussian_path", type=str, required=True)
     parser.add_argument("--bg_img_path", type=str, required=True)
-    parser.add_argument("--out_path", type=str, required=True)
-    parser.add_argument("--case_name", type=str, default="double_stretch_sloth")
+    parser.add_argument("--inference_path", type=str, required=True)
+    parser.add_argument("--case_name", type=str, required=True)
     parser.add_argument("--n_ctrl_parts", type=int, default=2)
     parser.add_argument(
         "--inv_ctrl", action="store_true", help="invert horizontal control direction"
@@ -43,7 +43,7 @@ if __name__ == "__main__":
     base_path = args.base_path
     physics_sparse_path = args.physics_sparse_path
     physics_dense_path = args.physics_dense_path
-    out_path = args.out_path
+    inference_path = args.inference_path
     case_name = args.case_name
 
     if "cloth" in case_name or "package" in case_name:
@@ -51,7 +51,7 @@ if __name__ == "__main__":
     else:
         cfg.load_from_yaml(f"{DIR}/configs/real.yaml")
 
-    out_dir=f"{out_path}/{case_name}/play"
+    out_dir=f"{inference_path}/{case_name}/play"
 
     # Read the first-satage optimized parameters to set the indifferentiable parameters
     optimal_path = f"{physics_sparse_path}/{case_name}/optimal_params.pkl"

@@ -30,18 +30,18 @@ if __name__ == "__main__":
     parser.add_argument("--base_path", type=str, required=True)
     parser.add_argument("--physics_sparse_path", type=str, required=True)
     parser.add_argument("--physics_dense_path", type=str, required=True)
-    parser.add_argument("--out_path", type=str, required=True)
+    parser.add_argument("--inference_path", type=str, required=True)
     parser.add_argument("--case_name", type=str, required=True)
     args = parser.parse_args()
 
     base_path = args.base_path
     physics_sparse_path = args.physics_sparse_path
     physics_dense_path = args.physics_dense_path
-    out_path = args.out_path
+    inference_path = args.inference_path
     case_name = args.case_name
 
     base_dir=f"{physics_dense_path}/{case_name}"
-    out_dir=f"{out_path}/{case_name}/physics"
+    out_dir=f"{inference_path}/{case_name}/physics"
 
     if "cloth" in case_name or "package" in case_name:
         cfg.load_from_yaml(f"{DIR}/configs/cloth.yaml")

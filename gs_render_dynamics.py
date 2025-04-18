@@ -113,7 +113,7 @@ def render_sets(
     remove_gaussians: bool = False,
 ):
     case_name = dataset.source_path.split("/")[-1]
-    render_path=f"{out_path}/{case_name}/dynamic" #gaussian_output_dynamicから変更
+    dynamic_scene_dir=f"{out_path}/{case_name}/dynamic" #gaussian_output_dynamicから変更
     ctrl_pts_path = f"{out_path}/{case_name}/physics/inference.pkl"
     
     with torch.no_grad():
@@ -207,7 +207,7 @@ def render_sets(
         views = scene.getTestCameras()
 
         render_set(
-            render_path,
+            dynamic_scene_dir,
             views,
             gaussians_list,
             pipeline,
@@ -272,7 +272,7 @@ if __name__ == "__main__":
     parser = ArgumentParser(description="Testing script parameters")
     model = ModelParams(parser, sentinel=True)
     pipeline = PipelineParams(parser)
-    parser.add_argument("--out_path", type=str, required=True)
+    parser.add_argument("--inference_path", type=str, required=True)
     parser.add_argument("--iteration", default=-1, type=int)
     parser.add_argument("--skip_train", action="store_true")
     parser.add_argument("--skip_test", action="store_true")
@@ -280,13 +280,13 @@ if __name__ == "__main__":
     parser.add_argument("--remove_gaussians", action="store_true")
     args = get_combined_args(parser)
     print("Rendering " + args.model_path)
-    out_path=args.out_path
+    inference_path=args.inference_path
 
     # Initialize system state (RNG)
     safe_state(args.quiet)
 
     render_sets(
-        out_path,
+        inference_path,
         model.extract(args),
         args.iteration,
         pipeline.extract(args),

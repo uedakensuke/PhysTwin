@@ -10,7 +10,6 @@ import pickle
 import json
 
 DIR = os.path.dirname(__file__)
-WORKSPACE_DIR = f"{DIR}/../mount/ws"
 
 def get_train_frame(base_path,case_name):
     # Read the train test split
