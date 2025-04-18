@@ -11,7 +11,6 @@ import pickle
 import json
 
 DIR = os.path.dirname(__file__)
-WORKSPACE_DIR = f"{DIR}/../mount/ws"
 
 def set_all_seeds(seed):
     random.seed(seed)
@@ -28,16 +27,20 @@ set_all_seeds(seed)
 
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument(
-        "--base_path",
-        type=str,
-        default=f"{WORKSPACE_DIR}/data/different_types",
-    )
+    parser.add_argument("--base_path", type=str, required=True)
+    parser.add_argument("--physics_sparse_path", type=str, required=True)
+    parser.add_argument("--physics_dense_path", type=str, required=True)
+    parser.add_argument("--out_path", type=str, required=True)
     parser.add_argument("--case_name", type=str, required=True)
     args = parser.parse_args()
 
     base_path = args.base_path
+    physics_sparse_path = args.physics_sparse_path
+    physics_dense_path = args.physics_dense_path
+    out_path = args.out_path
     case_name = args.case_name
+
+    out_dir=f"{out_path}/{case_name}"
 
     if "cloth" in case_name or "package" in case_name:
         cfg.load_from_yaml(f"{DIR}/configs/cloth.yaml")
@@ -46,10 +49,8 @@ if __name__ == "__main__":
 
     logger.info(f"[DATA TYPE]: {cfg.data_type}")
 
-    base_dir = f"{WORKSPACE_DIR}/experiments/{case_name}"
-
     # Read the first-satage optimized parameters to set the indifferentiable parameters
-    optimal_path = f"{WORKSPACE_DIR}/experiments_optimization/{case_name}/optimal_params.pkl"
+    optimal_path = f"{physics_sparse_path}/{case_name}/optimal_params.pkl"
     logger.info(f"Load optimal parameters from: {optimal_path}")
     assert os.path.exists(
         optimal_path
@@ -70,12 +71,12 @@ if __name__ == "__main__":
     cfg.WH = data["WH"]
     cfg.overlay_path = f"{base_path}/{case_name}/color"
 
-    logger.set_log_file(path=f"{base_dir}/test", name="inference_log")
+    logger.set_log_file(path=out_dir, name="inference_log")
     trainer = InvPhyTrainerWarp(
         data_path=f"{base_path}/{case_name}/final_data.pkl",
-        base_dir=base_dir,
+        base_dir=out_dir,
         pure_inference_mode=True,
     )
-    assert len(glob.glob(f"{base_dir}/train/best_*.pth")) > 0
-    best_model_path = glob.glob(f"{base_dir}/train/best_*.pth")[0]
+    assert len(glob.glob(f"{physics_dense_path}/train/best_*.pth")) > 0
+    best_model_path = glob.glob(f"{physics_dense_path}/train/best_*.pth")[0]
     trainer.test(best_model_path)

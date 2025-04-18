@@ -12,7 +12,6 @@ import json
 from argparse import ArgumentParser
 
 DIR = os.path.dirname(__file__)
-WORKSPACE_DIR = f"{DIR}/../mount/ws"
 
 def get_train_frame(base_path,case_name):
     # Read the train test split
@@ -40,16 +39,14 @@ sys.stderr = StreamToLogger(logger, logging.ERROR)
 
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument(
-        "--base_path",
-        type=str,
-        default=f"{WORKSPACE_DIR}/data/different_types",
-    )
+    parser.add_argument("--base_path", type=str, required=True)
+    parser.add_argument("--physics_sparse_path", type=str, required=True)
     parser.add_argument("--case_name", type=str, required=True)
     parser.add_argument("--max_iter", type=int, default=20)
     args = parser.parse_args()
 
     base_path = args.base_path
+    physics_sparse_path = args.physics_sparse_path
     case_name = args.case_name
     train_frame = get_train_frame(base_path, case_name)
     max_iter = args.max_iter
@@ -59,7 +56,7 @@ if __name__ == "__main__":
     else:
         cfg.load_from_yaml(f"{DIR}/configs/real.yaml")
 
-    base_dir = f"{WORKSPACE_DIR}/experiments_optimization/{case_name}"
+    base_dir = f"{physics_sparse_path}/{case_name}"
 
     # Set the intrinsic and extrinsic parameters for visualization
     with open(f"{base_path}/{case_name}/calibrate.pkl", "rb") as f:

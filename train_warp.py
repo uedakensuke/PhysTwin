@@ -35,15 +35,15 @@ set_all_seeds(seed)
 
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument(
-        "--base_path",
-        type=str,
-        default=f"{WORKSPACE_DIR}/data/different_types",
-    )
+    parser.add_argument("--base_path", type=str, required=True)
+    parser.add_argument("--physics_sparse_path", type=str, required=True)
+    parser.add_argument("--physics_dense_path", type=str, required=True)
     parser.add_argument("--case_name", type=str, required=True)
     args = parser.parse_args()
 
     base_path = args.base_path
+    physics_sparse_path = args.physics_sparse_path
+    physics_dense_path = args.physics_dense_path
     case_name = args.case_name
     train_frame = get_train_frame(base_path, case_name)
 
@@ -54,10 +54,10 @@ if __name__ == "__main__":
 
     print(f"[DATA TYPE]: {cfg.data_type}")
 
-    base_dir = f"{WORKSPACE_DIR}/experiments/{case_name}"
+    base_dir = f"{physics_dense_path}/{case_name}"
 
     # Read the first-satage optimized parameters
-    optimal_path = f"{WORKSPACE_DIR}/experiments_optimization/{case_name}/optimal_params.pkl"
+    optimal_path = f"{physics_sparse_path}/{case_name}/optimal_params.pkl"
     assert os.path.exists(
         optimal_path
     ), f"{case_name}: Optimal parameters not found: {optimal_path}"
@@ -77,7 +77,7 @@ if __name__ == "__main__":
     cfg.WH = data["WH"]
     cfg.overlay_path = f"{base_path}/{case_name}/color"
 
-    logger.set_log_file(path=f"{base_dir}/train", name="inv_phy_log")
+    logger.set_log_file(path=base_dir, name="inv_phy_log")
     trainer = InvPhyTrainerWarp(
         data_path=f"{base_path}/{case_name}/final_data.pkl",
         base_dir=base_dir,
