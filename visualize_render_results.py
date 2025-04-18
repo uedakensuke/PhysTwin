@@ -1,27 +1,30 @@
-import glob
 import json
 import numpy as np
 import cv2
+from argparse import ArgumentParser
 
-WORKSPACE_DIR = "../mount/ws"
 
-base_path = f"{WORKSPACE_DIR}/data/different_types"
-prediction_dir = f"{WORKSPACE_DIR}/gaussian_output_dynamic"
-human_mask_path = (
-    f"{WORKSPACE_DIR}/data/different_types_human_mask"
-)
-object_mask_path = (
-    f"{WORKSPACE_DIR}/data/render_eval_data"
-)
+# prediction_dir = f"{WORKSPACE_DIR}/gaussian_output_dynamic"
+# object_mask_path = (
+#     f"{WORKSPACE_DIR}/data/render_eval_data"
+# )
 
 height, width = 480, 848
 FPS = 30
 alpha = 0.7
 
-dir_names = glob.glob(f"{base_path}/*")
-for dir_name in dir_names:
-    case_name = dir_name.split("/")[-1]
-    print(f"Processing {case_name}!!!!!!!!!!!!!!!")
+if __name__ == "__main__":
+    parser = ArgumentParser()
+    parser.add_argument("--base_path", type=str, required=True)
+    parser.add_argument("--human_mask_path", type=str, required=True)
+    parser.add_argument("--out_path", type=str, required=True)
+    parser.add_argument("--case_name", type=str, default="double_lift_cloth_3")
+    args = parser.parse_args()
+
+    base_path = args.base_path
+    human_mask_path = args.human_mask_path
+    out_path = args.out_path
+    case_name = args.case_name
 
     with open(f"{base_path}/{case_name}/split.json", "r") as f:
         split = json.load(f)

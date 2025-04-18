@@ -11,7 +11,6 @@ import pickle
 import json
 
 DIR = os.path.dirname(__file__)
-WORKSPACE_DIR = f"{DIR}/../mount/ws"
 
 def set_all_seeds(seed):
     random.seed(seed)
@@ -28,21 +27,12 @@ set_all_seeds(seed)
 
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument(
-        "--base_path",
-        type=str,
-        default=f"{WORKSPACE_DIR}/data/different_types",
-    )
-    parser.add_argument(
-        "--gaussian_path",
-        type=str,
-        default=f"{WORKSPACE_DIR}/gaussian_output",
-    )
-    parser.add_argument(
-        "--bg_img_path",
-        type=str,
-        default=f"{WORKSPACE_DIR}/data/bg.png",
-    )
+    parser.add_argument("--base_path", type=str, required=True)
+    parser.add_argument("--physics_sparse_path", type=str, required=True)
+    parser.add_argument("--physics_dense_path", type=str, required=True)
+    parser.add_argument("--gaussian_path", type=str, required=True)
+    parser.add_argument("--bg_img_path", type=str, required=True)
+    parser.add_argument("--out_path", type=str, required=True)
     parser.add_argument("--case_name", type=str, default="double_stretch_sloth")
     parser.add_argument("--n_ctrl_parts", type=int, default=2)
     parser.add_argument(
@@ -51,6 +41,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     base_path = args.base_path
+    physics_sparse_path = args.physics_sparse_path
+    physics_dense_path = args.physics_dense_path
+    out_path = args.out_path
     case_name = args.case_name
 
     if "cloth" in case_name or "package" in case_name:
@@ -58,10 +51,10 @@ if __name__ == "__main__":
     else:
         cfg.load_from_yaml(f"{DIR}/configs/real.yaml")
 
-    base_dir = f"{WORKSPACE_DIR}/temp_experiments/{case_name}"
+    out_dir=f"{out_path}/{case_name}/play"
 
     # Read the first-satage optimized parameters to set the indifferentiable parameters
-    optimal_path = f"{WORKSPACE_DIR}/experiments_optimization/{case_name}/optimal_params.pkl"
+    optimal_path = f"{physics_sparse_path}/{case_name}/optimal_params.pkl"
     logger.info(f"Load optimal parameters from: {optimal_path}")
     assert os.path.exists(
         optimal_path
@@ -85,14 +78,14 @@ if __name__ == "__main__":
     exp_name = "init=hybrid_iso=True_ldepth=0.001_lnormal=0.0_laniso_0.0_lseg=1.0"
     gaussians_path = f"{args.gaussian_path}/{case_name}/{exp_name}/point_cloud/iteration_10000/point_cloud.ply"
 
-    logger.set_log_file(path=base_dir, name="inference_log")
+    logger.set_log_file(path=out_dir, name="inference_log")
     trainer = InvPhyTrainerWarp(
         data_path=f"{base_path}/{case_name}/final_data.pkl",
-        base_dir=base_dir,
+        base_dir=out_dir,
         pure_inference_mode=True,
     )
 
-    best_model_path = glob.glob(f"{WORKSPACE_DIR}/experiments/{case_name}/train/best_*.pth")[0]
+    best_model_path = glob.glob(f"{physics_dense_path}/{case_name}/train/best_*.pth")[0]
     trainer.interactive_playground(
         best_model_path, gaussians_path, args.n_ctrl_parts, args.inv_ctrl
     )

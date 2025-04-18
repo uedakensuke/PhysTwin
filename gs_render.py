@@ -242,7 +242,7 @@ if __name__ == "__main__":
     parser = ArgumentParser(description="Testing script parameters")
     model = ModelParams(parser, sentinel=True)
     pipeline = PipelineParams(parser)
-    parser.add_argument("--out_path", type=str, required=True)
+    parser.add_argument("--out_dir", type=str, required=True)
     parser.add_argument("--iteration", default=-1, type=int)
     parser.add_argument("--skip_train", action="store_true")
     parser.add_argument("--skip_test", action="store_true")
@@ -250,8 +250,8 @@ if __name__ == "__main__":
     parser.add_argument("--remove_gaussians", action="store_true")
     args = get_combined_args(parser)
     print("Rendering " + args.model_path)
-    out_path=args.out_path
+    out_dir=args.out_dir
     # Initialize system state (RNG)
     safe_state(args.quiet)
 
-    render_sets(out_path, model.extract(args), args.iteration, pipeline.extract(args), args.skip_train, args.skip_test, SPARSE_ADAM_AVAILABLE, args.remove_gaussians)
+    render_sets(out_dir, model.extract(args), args.iteration, pipeline.extract(args), args.skip_train, args.skip_test, SPARSE_ADAM_AVAILABLE, args.remove_gaussians)

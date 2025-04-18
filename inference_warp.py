@@ -40,7 +40,8 @@ if __name__ == "__main__":
     out_path = args.out_path
     case_name = args.case_name
 
-    out_dir=f"{out_path}/{case_name}"
+    base_dir=f"{physics_dense_path}/{case_name}"
+    out_dir=f"{out_path}/{case_name}/physics"
 
     if "cloth" in case_name or "package" in case_name:
         cfg.load_from_yaml(f"{DIR}/configs/cloth.yaml")
@@ -77,6 +78,6 @@ if __name__ == "__main__":
         base_dir=out_dir,
         pure_inference_mode=True,
     )
-    assert len(glob.glob(f"{physics_dense_path}/train/best_*.pth")) > 0
-    best_model_path = glob.glob(f"{physics_dense_path}/train/best_*.pth")[0]
+    assert len(glob.glob(f"{base_dir}/train/best_*.pth")) > 0
+    best_model_path = glob.glob(f"{base_dir}/train/best_*.pth")[0]
     trainer.test(best_model_path)
