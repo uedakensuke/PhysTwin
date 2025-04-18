@@ -133,7 +133,7 @@ if __name__ == "__main__":
     case_name = args.case_name
 
     result = eval(
-        f'{inference_path}/{case_name}/dynamic' # gaussian_output_dynamicから変更,
+        f'{inference_path}/{case_name}/dynamic', # gaussian_output_dynamicから変更
         f'{eval_path}/{case_name}/render_eval_data',
         f'{human_mask_path}/{case_name}'
     )
