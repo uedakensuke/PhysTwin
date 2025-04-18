@@ -77,7 +77,7 @@ if __name__ == "__main__":
     cfg.WH = data["WH"]
     cfg.overlay_path = f"{base_path}/{case_name}/color"
 
-    logger.set_log_file(path=base_dir, name="inv_phy_log")
+    logger.set_log_file(path=f"{base_dir}/train", name="inv_phy_log")
     trainer = InvPhyTrainerWarp(
         data_path=f"{base_path}/{case_name}/final_data.pkl",
         base_dir=base_dir,

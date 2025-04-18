@@ -484,8 +484,8 @@ class InvPhyTrainerWarp:
             )
 
         # Render the initial visualization
-        video_path = f"{cfg.base_dir}/inference.mp4"
-        save_path = f"{cfg.base_dir}/inference.pkl"
+        video_path = f"{cfg.base_dir}/test/inference.mp4"
+        save_path = f"{cfg.base_dir}/test/inference.pkl"
         self.visualize_sim(
             save_only=True,
             video_path=video_path,
