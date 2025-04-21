@@ -39,8 +39,8 @@ class SegmentProcessor:
         self.video_path = f"{raw_path}/{case_name}/color/{camera_idx}.mp4"
         self.output_path = f"{base_path}/{case_name}"
 
-        self.mask_info_path = f"{self.output_path}/mask/mask_info_{self.camera_idx}.json"
-        self.mask_dir = f"{self.output_path}/mask/{self.camera_idx}"
+        self.mask_info_path = f"{self.output_path}/mask/mask_info_{camera_idx}.json"
+        self.mask_dir = f"{self.output_path}/mask/{camera_idx}"
         self.source_video_frame_dir = f"{base_path}/{case_name}/tmp_data/{case_name}/{camera_idx}"
 
         existDir(self.source_video_frame_dir)
