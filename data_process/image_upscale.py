@@ -6,13 +6,14 @@ import cv2
 import numpy as np
 
 class Upscaler:
-    def __init__(self, model_id = "stabilityai/stable-diffusion-x4-upscaler"):
-        # load model and scheduler        
+    def __init__(self, category:str, *, model_id = "stabilityai/stable-diffusion-x4-upscaler"):
+        self.category = category
+        # load model and scheduler
         self.pipeline = StableDiffusionUpscalePipeline.from_pretrained(
             model_id, torch_dtype=torch.float16
         ).to("cuda")
 
-    def process(self):
+    def process(self, img_path:str, mask_path:str, output_path:str):
         # let's download an  image
         low_res_img = Image.open(img_path).convert("RGB")
         if mask_path is not None:
@@ -25,9 +26,10 @@ class Upscaler:
             bbox = center[0] - size // 2, center[1] - size // 2, center[0] + size // 2, center[1] + size // 2
             low_res_img = low_res_img.crop(bbox)  # type: ignore
 
-        prompt = f"Hand manipulates a {category}."
-
-        upscaled_image = self.pipeline(prompt=prompt, image=low_res_img).images[0]
+        upscaled_image = self.pipeline(
+            prompt=f"Hand manipulates a {self.category}.",
+            image=low_res_img
+        ).images[0]
         upscaled_image.save(output_path)
 
 if __name__ == "__main__":
@@ -38,10 +40,5 @@ if __name__ == "__main__":
     parser.add_argument("--category", type=str, required=True)
     args = parser.parse_args()
 
-    img_path = args.img_path
-    mask_path = args.mask_path
-    output_path = args.output_path
-    category = args.category
-
-    us=Upscaler()
-    us.process()
+    us=Upscaler(args.category)
+    us.process(args.img_path, args.mask_path, args.output_path)
