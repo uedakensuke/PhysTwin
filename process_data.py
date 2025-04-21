@@ -54,7 +54,7 @@ class DataProcessor:
         self.base_path = base_path
         self.case_name = case_name
         self.logger = setup_logger(f"{base_path}/{case_name}/timer.log")
-        self.category, self.use_shape_prior = _read_config(base_path, case_name)
+        self.category, self.use_shape_prior = _read_config(raw_path, case_name)
 
     def process(self):
         self._process_seg()
