@@ -30,40 +30,20 @@ def existDir(dir_path):
 
 class SegmentProcessor:
 
-    def __init__(self, raw_path:str, base_path:str, case_name:str, camera_idx:str, text_prompt:str):
-        self.text_prompt = text_prompt
+    def __init__(self, raw_path:str, base_path:str, case_name:str):
+        self.raw_path = raw_path
+        self.base_path = base_path
+        self.case_name = case_name
 
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.ann_frame_idx = 0  # the frame index we interact with
 
-        self.video_path = f"{raw_path}/{case_name}/color/{camera_idx}.mp4"
-        self.output_path = f"{base_path}/{case_name}"
-
-        self.mask_info_path = f"{self.output_path}/mask/mask_info_{camera_idx}.json"
-        self.mask_dir = f"{self.output_path}/mask/{camera_idx}"
-        self.source_video_frame_dir = f"{base_path}/{case_name}/tmp_data/{case_name}/{camera_idx}"
-
-        existDir(self.source_video_frame_dir)
-        existDir(self.mask_dir)
-
-    def process(self):
-        self.step1()
-        OBJECTS, input_boxes = self.step2()
-        self.step3(OBJECTS, input_boxes)
-        video_segments = self.step4()
-        self.step5(OBJECTS, video_segments)
-
-    def step1(self):
-        """
-        Step 1: Environment settings and model initialization for Grounding DINO and SAM 2
-        """
         # build grounding dino model from local path
         self.grounding_model = load_model(
             model_config_path= f"{DIR}/groundedSAM_checkpoints/GroundingDINO_SwinT_OGC.py",
             model_checkpoint_path=f"{DIR}/groundedSAM_checkpoints/groundingdino_swint_ogc.pth",
             device=self.device,
         )
-
 
         # init sam image predictor and video predictor model
         sam2_checkpoint = f"{DIR}//groundedSAM_checkpoints/sam2.1_hiera_large.pt"
@@ -73,13 +53,55 @@ class SegmentProcessor:
         sam2_image_model = build_sam2(model_cfg, sam2_checkpoint)
         self.image_predictor = SAM2ImagePredictor(sam2_image_model)
 
+    def process(self, camera_idx:int, text_prompt:str):
+        source_video_frame_dir = f"{self.base_path}/{self.case_name}/tmp_data/{self.case_name}/{camera_idx}"
+        output_path=f"{self.base_path}/{self.case_name}/mask"
 
-        video_info = sv.VideoInfo.from_video_path(self.video_path)  # get video info
+        """
+        Step 1: Environment settings
+        """
+        frame_names =self._extruct_frames(
+            f"{self.raw_path}/{self.case_name}/color/{camera_idx}.mp4",
+            source_video_frame_dir
+        )
+        img_path = os.path.join(source_video_frame_dir, frame_names[self.ann_frame_idx])
+
+        """
+        Step 2: Prompt Grounding DINO 1.5 with Cloud API for box coordinates
+        """
+        # prompt grounding dino to get the box coordinates on specific frame
+        object_ids, input_boxes, image_source = self._predict_boxes(
+            img_path,
+            f"{output_path}/mask_info_{camera_idx}.json"
+        )
+
+        # self._predict_masks(image_source, input_boxes)
+
+        """
+        Step 3: Register each object's positive points to video predictor with seperate add_new_points call
+        """
+        inference_state = self._prepare_video_predictor(source_video_frame_dir, object_ids, input_boxes)
+
+        """
+        Step 4: Propagate the video predictor to get the segmentation results for each frame
+        Step 5: Visualize the segment results across the video and save them
+        """
+        self._segment_video(
+            inference_state,
+            f"{output_path}/{camera_idx}",
+        )
+
+        os.system(f"rm -rf {source_video_frame_dir}")
+
+    def _extruct_frames(self, video_path:str, source_video_frame_dir:str):
+        existDir(source_video_frame_dir)
+
+        video_info = sv.VideoInfo.from_video_path(video_path)  # get video info
         print(video_info)
-        frame_generator = sv.get_video_frames_generator(self.video_path, stride=1, start=0, end=None)
+        frame_generator = sv.get_video_frames_generator(video_path, stride=1, start=0, end=None)
 
         # saving video to frames
-        source_frames = Path(self.source_video_frame_dir)
+        source_frames = Path(source_video_frame_dir)
         source_frames.mkdir(parents=True, exist_ok=True)
 
         with sv.ImageSink(
@@ -89,23 +111,16 @@ class SegmentProcessor:
                 sink.save_image(frame)
 
         # scan all the JPEG frame names in this directory
-        self.frame_names = [
+        frame_names = [
             p
-            for p in os.listdir(self.source_video_frame_dir)
+            for p in os.listdir(source_video_frame_dir)
             if os.path.splitext(p)[-1] in [".jpg", ".jpeg", ".JPG", ".JPEG"]
         ]
-        self.frame_names.sort(key=lambda p: int(os.path.splitext(p)[0]))
+        frame_names.sort(key=lambda p: int(os.path.splitext(p)[0]))
 
-        # init video predictor state
-        self.inference_state = self.video_predictor.init_state(video_path=self.source_video_frame_dir)
+        return frame_names
 
-    def step2(self):
-        """
-        Step 2: Prompt Grounding DINO 1.5 with Cloud API for box coordinates
-        """
-
-        # prompt grounding dino to get the box coordinates on specific frame
-        img_path = os.path.join(self.source_video_frame_dir, self.frame_names[self.ann_frame_idx])
+    def _predict_boxes(self, img_path:str, mask_info_path:str):
         image_source, image = load_image(img_path)
 
         boxes, confidences, labels = predict(
@@ -121,17 +136,20 @@ class SegmentProcessor:
         boxes = boxes * torch.Tensor([w, h, w, h])
         input_boxes = box_convert(boxes=boxes, in_fmt="cxcywh", out_fmt="xyxy").numpy()
         confidences = confidences.numpy().tolist()
-        class_names = labels
 
         print(input_boxes)
+        print(labels)
 
+        # Save the id_to_objects into json
+        existDir(os.path.dirname(mask_info_path))
+        with open(mask_info_path, "w") as f:
+            json.dump({i: obj for i, obj in enumerate(labels)}, f)
+
+        return labels, input_boxes, image_source
+
+    def _predict_masks(self, image_source, input_boxes:str):
         # prompt SAM image predictor to get the mask for the object
         self.image_predictor.set_image(image_source)
-
-        # process the detection results
-        OBJECTS = class_names
-
-        print(OBJECTS)
 
         # FIXME: figure how does this influence the G-DINO model
         # commnet out by UEAD. this cause error
@@ -152,12 +170,12 @@ class SegmentProcessor:
         # convert the mask shape to (n, H, W)
         if masks.ndim == 4:
             masks = masks.squeeze(1)
-        return OBJECTS, input_boxes
 
-    def step3(self, OBJECTS, input_boxes):
-        """
-        Step 3: Register each object's positive points to video predictor with seperate add_new_points call
-        """
+    def _prepare_video_predictor(self, source_video_frame_dir, object_ids, input_boxes):
+        # init video predictor state
+        inference_state = self.video_predictor.init_state(
+            video_path=source_video_frame_dir
+        )
 
         assert PROMPT_TYPE_FOR_VIDEO in [
             "point",
@@ -166,9 +184,9 @@ class SegmentProcessor:
         ], "SAM 2 video predictor only support point/box/mask prompt"
 
         if PROMPT_TYPE_FOR_VIDEO == "box":
-            for object_id, (label, box) in enumerate(zip(OBJECTS, input_boxes)):
+            for object_id, (label, box) in enumerate(zip(object_ids, input_boxes)):
                 _, out_obj_ids, out_mask_logits = self.video_predictor.add_new_points_or_box(
-                    inference_state=self.inference_state,
+                    inference_state=inference_state,
                     frame_idx=self.ann_frame_idx,
                     obj_id=object_id,
                     box=box,
@@ -177,45 +195,30 @@ class SegmentProcessor:
             raise NotImplementedError(
                 "SAM 2 video predictor only support point/box/mask prompts"
             )
+        return inference_state
 
-    def step4(self):
-        """
-        Step 4: Propagate the video predictor to get the segmentation results for each frame
-        """
+    def _segment_video(self, inference_state, output_path):
         video_segments = {}  # video_segments contains the per-frame segmentation results
         for (
             out_frame_idx,
             out_obj_ids,
             out_mask_logits,
-        ) in self.video_predictor.propagate_in_video(self.inference_state):
+        ) in self.video_predictor.propagate_in_video(inference_state):
             video_segments[out_frame_idx] = {
                 out_obj_id: (out_mask_logits[i] > 0.0).cpu().numpy()
                 for i, out_obj_id in enumerate(out_obj_ids)
             }
-        return video_segments
-
-    def step5(self,OBJECTS, video_segments):
-        """
-        Step 5: Visualize the segment results across the video and save them
-        """
-
-        ID_TO_OBJECTS = {i: obj for i, obj in enumerate(OBJECTS)}
-
-        # Save the id_to_objects into json
-        with open(self.mask_info_path, "w") as f:
-            json.dump(ID_TO_OBJECTS, f)
 
         for frame_idx, masks in video_segments.items():
             for obj_id, mask in masks.items():
-                existDir(f"{self.mask_dir}/{obj_id}")
+                mask_frame_dir = f"{output_path}/{obj_id}"
+                existDir(mask_frame_dir)
                 # mask is 1 * H * W
                 Image.fromarray((mask[0] * 255).astype(np.uint8)).save(
-                    f"{self.mask_dir}/{obj_id}/{frame_idx}.png"
+                    f"{mask_frame_dir}/{frame_idx}.png"
                 )
-        os.system(f"rm -rf {self.source_video_frame_dir}")
 
 if __name__ == "__main__":
-    # Put below base path into args
     parser = ArgumentParser()
     parser.add_argument("--raw_path", type=str, required=True)
     parser.add_argument("--base_path", type=str, required=True)
@@ -224,5 +227,5 @@ if __name__ == "__main__":
     parser.add_argument("--camera_idx", type=int, required=True)
     args = parser.parse_args()
 
-    sp = SegmentProcessor(args.raw_name, args.base_path, args.case_name, args.camera_idx, args.TEXT_PROMPT)
+    sp = SegmentProcessor(args.raw_path, args.base_path, args.case_name, args.camera_idx, args.TEXT_PROMPT)
     sp.process()

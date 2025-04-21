@@ -40,13 +40,13 @@ class Timer:
     def __enter__(self):
         self.start_time = time.time()
         self.logger.info(
-            f"!!!!!!!!!!!! {self.task_name}: Processing {self.case_name} !!!!!!!!!!!!"
+            f"[start   ] {self.task_name} for {self.case_name}"
         )
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         elapsed_time = time.time() - self.start_time
         self.logger.info(
-            f"!!!!!!!!!!! Time for {self.task_name}: {elapsed_time:.2f} sec !!!!!!!!!!!!"
+            f"[complete] {self.task_name} for {self.case_name}: {elapsed_time:.2f} sec"
         )
 
 class DataProcessor:
@@ -59,8 +59,8 @@ class DataProcessor:
 
     def process(self):
         self._process_seg()
-        # if self.use_shape_prior:
-        #     self._process_shape_prior()
+        if self.use_shape_prior:
+            self._process_shape_prior()
         # self._process_track()
         # self._process_3d()
         # if self.use_shape_prior:
@@ -75,8 +75,8 @@ class DataProcessor:
         with Timer(self.logger,"Video Segmentation",self.case_name):
             for camera_idx in range(camera_num):
                 print(f"Processing {self.case_name} camera {camera_idx}")
-                sp = SegmentProcessor(self.raw_path,self.base_path,self.case_name,camera_idx,text_prompt)
-                sp.process()
+                sp = SegmentProcessor(self.raw_path,self.base_path,self.case_name)
+                sp.process(camera_idx,text_prompt)
 
     def _process_shape_prior(self):
         # Get the mask path for the image
@@ -95,7 +95,7 @@ class DataProcessor:
         with Timer(self.logger,"Image Upscale",self.case_name):
             if not os.path.isfile(f"{self.base_path}/{self.case_name}/shape/high_resolution.png"):
                 os.system(
-                    f"python ./data_process/image_upscale.py --img_path {self.base_path}/{self.case_name}/color/0/0.png --mask_path {mask_path} --output_path {self.base_path}/{self.case_name}/shape/high_resolution.png --category {category}"
+                    f"python ./data_process/image_upscale.py --img_path {self.base_path}/{self.case_name}/color/0/0.png --mask_path {mask_path} --output_path {self.base_path}/{self.case_name}/shape/high_resolution.png --category {self.category}"
                 )
 
         # Get the masked image of the object
