@@ -166,8 +166,8 @@ class DataProcessor:
 def _read_config(raw_path:str, case_name:str):
     with open(f"{raw_path}/{case_name}/data_config.csv", newline="", encoding="utf-8") as f:
         line = f.readline()
-    category = line[0]
-    use_shape_prior = line[1]
+    category = line.split(",")[0]
+    use_shape_prior = line.split(",")[1]
     return category, use_shape_prior
 
 if __name__ == "__main__":

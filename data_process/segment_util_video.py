@@ -134,7 +134,8 @@ class SegmentProcessor:
         print(OBJECTS)
 
         # FIXME: figure how does this influence the G-DINO model
-        torch.autocast(device_type=self.device, dtype=torch.bfloat16).__enter__()
+        # commnet out by UEAD. this cause error
+        # torch.autocast(device_type=self.device, dtype=torch.bfloat16).__enter__()
 
         if torch.cuda.get_device_properties(0).major >= 8:
             # turn on tfloat32 for Ampere GPUs (https://pytorch.org/docs/stable/notes/cuda.html#tensorfloat-32-tf32-on-ampere-devices)
