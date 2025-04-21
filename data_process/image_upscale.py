@@ -5,7 +5,7 @@ from argparse import ArgumentParser
 import cv2
 import numpy as np
 
-class Upscaler:
+class UpscaleProcessor:
     def __init__(self, category:str, *, model_id = "stabilityai/stable-diffusion-x4-upscaler"):
         self.category = category
         # load model and scheduler
@@ -40,5 +40,5 @@ if __name__ == "__main__":
     parser.add_argument("--category", type=str, required=True)
     args = parser.parse_args()
 
-    us=Upscaler(args.category)
-    us.process(args.img_path, args.mask_path, args.output_path)
+    up=UpscaleProcessor(args.category)
+    up.process(args.img_path, args.mask_path, args.output_path)

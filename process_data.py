@@ -5,7 +5,10 @@ import logging
 import json
 import glob
 
-from data_process.segment_util_video import SegmentProcessor
+from data_process.segment_util_video import SegmentVideoProcessor
+from data_process.image_upscale import UpscaleProcessor
+from data_process.segment_util_image import SegmentImageProcessor
+from data_process.shape_prior import ShapeProcessor
 
 CONTROLLER_NAME = "hand"
 
@@ -75,8 +78,8 @@ class DataProcessor:
         with Timer(self.logger,"Video Segmentation",self.case_name):
             for camera_idx in range(camera_num):
                 print(f"Processing {self.case_name} camera {camera_idx}")
-                sp = SegmentProcessor(self.raw_path,self.base_path,self.case_name)
-                sp.process(camera_idx,text_prompt)
+                svp = SegmentVideoProcessor(self.raw_path,self.base_path,self.case_name)
+                svp.process(camera_idx,text_prompt)
 
     def _process_shape_prior(self):
         # Get the mask path for the image
@@ -93,20 +96,29 @@ class DataProcessor:
         existDir(f"{self.base_path}/{self.case_name}/shape")
         # Get the high-resolution of the image to prepare for the trellis generation
         with Timer(self.logger,"Image Upscale",self.case_name):
-            if not os.path.isfile(f"{self.base_path}/{self.case_name}/shape/high_resolution.png"):
-                os.system(
-                    f"python ./data_process/image_upscale.py --img_path {self.base_path}/{self.case_name}/color/0/0.png --mask_path {mask_path} --output_path {self.base_path}/{self.case_name}/shape/high_resolution.png --category {self.category}"
+            upscale_img_path = f"{self.base_path}/{self.case_name}/shape/high_resolution.png"
+            if not os.path.isfile(upscale_img_path):
+                up = UpscaleProcessor(self.category)
+                up.process(
+                    f"{self.base_path}/{self.case_name}/color/0/0.png",
+                    mask_path,
+                    upscale_img_path
                 )
 
         # Get the masked image of the object
         with Timer(self.logger,"Image Segmentation",self.case_name):
-            os.system(
-                f"python ./data_process/segment_util_image.py --img_path {self.base_path}/{self.case_name}/shape/high_resolution.png --TEXT_PROMPT {self.category} --output_path {self.base_path}/{self.case_name}/shape/masked_image.png"
+            sip = SegmentImageProcessor()
+            sip.process(
+                f"{self.base_path}/{self.case_name}/shape/high_resolution.png",
+                self.category,
+                f"{self.base_path}/{self.case_name}/shape/masked_image.png"
             )
 
         with Timer(self.logger,"Shape Prior Generation",self.case_name):
-            os.system(
-                f"python ./data_process/shape_prior.py --img_path {self.base_path}/{self.case_name}/shape/masked_image.png --output_dir {self.base_path}/{self.case_name}/shape"
+            sp = ShapeProcessor()
+            sp.process(
+                f"{self.base_path}/{self.case_name}/shape/masked_image.png",
+                f"{self.base_path}/{self.case_name}/shape"
             )
 
     def _process_track(self):

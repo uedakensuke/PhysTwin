@@ -12,46 +12,47 @@ from TRELLIS.trellis.utils import render_utils, postprocessing_utils
 import numpy as np
 from argparse import ArgumentParser
 
-parser = ArgumentParser()
-parser.add_argument(
-    "--img_path",
-    type=str,
-)
-parser.add_argument("--output_dir", type=str)
-args = parser.parse_args()
 
-img_path = args.img_path
-output_dir = args.output_dir
+class ShapeProcessor:
+    def __init__(self):
+        # Load a pipeline from a model folder or a Hugging Face model hub.
+        self.pipeline = TrellisImageTo3DPipeline.from_pretrained(
+            "JeffreyXiang/TRELLIS-image-large"
+        ).cuda()
 
-# Load a pipeline from a model folder or a Hugging Face model hub.
-pipeline = TrellisImageTo3DPipeline.from_pretrained("JeffreyXiang/TRELLIS-image-large")
-pipeline.cuda()
+    def process(self, img_path:str, output_dir:str):
+        final_im = Image.open(img_path).convert("RGBA")
+        assert not np.all(np.array(final_im)[:, :, 3] == 255)
 
-final_im = Image.open(img_path).convert("RGBA")
-assert not np.all(np.array(final_im)[:, :, 3] == 255)
+        # Run the pipeline
+        outputs = self.pipeline.run(final_im)
 
-# Run the pipeline
-outputs = pipeline.run(
-    final_im,
-)
+        video_gs = render_utils.render_video(outputs["gaussian"][0])["color"]
+        video_mesh = render_utils.render_video(outputs["mesh"][0])["normal"]
+        video = [
+            np.concatenate([frame_gs, frame_mesh], axis=1)
+            for frame_gs, frame_mesh in zip(video_gs, video_mesh)
+        ]
+        imageio.mimsave(f"{output_dir}/visualization.mp4", video, fps=30)
 
-video_gs = render_utils.render_video(outputs["gaussian"][0])["color"]
-video_mesh = render_utils.render_video(outputs["mesh"][0])["normal"]
-video = [
-    np.concatenate([frame_gs, frame_mesh], axis=1)
-    for frame_gs, frame_mesh in zip(video_gs, video_mesh)
-]
-imageio.mimsave(f"{output_dir}/visualization.mp4", video, fps=30)
+        # GLB files can be extracted from the outputs
+        glb = postprocessing_utils.to_glb(
+            outputs["gaussian"][0],
+            outputs["mesh"][0],
+            # Optional parameters
+            simplify=0.95,  # Ratio of triangles to remove in the simplification process
+            texture_size=1024,  # Size of the texture used for the GLB
+        )
+        glb.export(f"{output_dir}/object.glb")
 
-# GLB files can be extracted from the outputs
-glb = postprocessing_utils.to_glb(
-    outputs["gaussian"][0],
-    outputs["mesh"][0],
-    # Optional parameters
-    simplify=0.95,  # Ratio of triangles to remove in the simplification process
-    texture_size=1024,  # Size of the texture used for the GLB
-)
-glb.export(f"{output_dir}/object.glb")
+        # Save Gaussians as PLY files
+        outputs["gaussian"][0].save_ply(f"{output_dir}/object.ply")
 
-# Save Gaussians as PLY files
-outputs["gaussian"][0].save_ply(f"{output_dir}/object.ply")
+if __name__ == "__main__":
+    parser = ArgumentParser()
+    parser.add_argument("--img_path", type=str, required=True)
+    parser.add_argument("--output_dir", type=str, required=True)
+    args = parser.parse_args()
+
+    sp = ShapeProcessor()
+    sp.process(args.img_path, args.output_dir)

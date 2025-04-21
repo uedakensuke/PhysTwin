@@ -28,7 +28,7 @@ def existDir(dir_path):
     if not os.path.exists(dir_path):
         os.makedirs(dir_path)
 
-class SegmentProcessor:
+class SegmentVideoProcessor:
 
     def __init__(self, raw_path:str, base_path:str, case_name:str):
         self.raw_path = raw_path
@@ -50,11 +50,18 @@ class SegmentProcessor:
         model_cfg = "configs/sam2.1/sam2.1_hiera_l.yaml"
 
         self.video_predictor = build_sam2_video_predictor(model_cfg, sam2_checkpoint)
-        sam2_image_model = build_sam2(model_cfg, sam2_checkpoint)
-        self.image_predictor = SAM2ImagePredictor(sam2_image_model)
+
+        # FIXME: figure how does this influence the G-DINO model
+        # comment out. it causes error
+        # torch.autocast(device_type="cuda", dtype=torch.bfloat16).__enter__()
+
+        if torch.cuda.get_device_properties(0).major >= 8:
+            # turn on tfloat32 for Ampere GPUs (https://pytorch.org/docs/stable/notes/cuda.html#tensorfloat-32-tf32-on-ampere-devices)
+            torch.backends.cuda.matmul.allow_tf32 = True
+            torch.backends.cudnn.allow_tf32 = True
 
     def process(self, camera_idx:int, text_prompt:str):
-        source_video_frame_dir = f"{self.base_path}/{self.case_name}/tmp_data/{self.case_name}/{camera_idx}"
+        source_video_frame_dir = f"{self.base_path}/{self.case_name}/tmp_data_{camera_idx}"
         output_path=f"{self.base_path}/{self.case_name}/mask"
 
         """
@@ -76,7 +83,6 @@ class SegmentProcessor:
             f"{output_path}/mask_info_{camera_idx}.json"
         )
 
-        # self._predict_masks(image_source, input_boxes)
 
         """
         Step 3: Register each object's positive points to video predictor with seperate add_new_points call
@@ -148,30 +154,6 @@ class SegmentProcessor:
 
         return labels, input_boxes, image_source
 
-    def _predict_masks(self, image_source, input_boxes:str):
-        # prompt SAM image predictor to get the mask for the object
-        self.image_predictor.set_image(image_source)
-
-        # FIXME: figure how does this influence the G-DINO model
-        # commnet out by UEAD. this cause error
-        # torch.autocast(device_type=self.device, dtype=torch.bfloat16).__enter__()
-
-        if torch.cuda.get_device_properties(0).major >= 8:
-            # turn on tfloat32 for Ampere GPUs (https://pytorch.org/docs/stable/notes/cuda.html#tensorfloat-32-tf32-on-ampere-devices)
-            torch.backends.cuda.matmul.allow_tf32 = True
-            torch.backends.cudnn.allow_tf32 = True
-
-        # prompt SAM 2 image predictor to get the mask for the object
-        masks, scores, logits = self.image_predictor.predict(
-            point_coords=None,
-            point_labels=None,
-            box=input_boxes,
-            multimask_output=False,
-        )
-        # convert the mask shape to (n, H, W)
-        if masks.ndim == 4:
-            masks = masks.squeeze(1)
-
     def _prepare_video_predictor(self, source_video_frame_dir, object_ids, input_boxes):
         # init video predictor state
         inference_state = self.video_predictor.init_state(
@@ -228,5 +210,5 @@ if __name__ == "__main__":
     parser.add_argument("--camera_idx", type=int, required=True)
     args = parser.parse_args()
 
-    sp = SegmentProcessor(args.raw_path, args.base_path, args.case_name, args.camera_idx, args.TEXT_PROMPT)
+    sp = SegmentVideoProcessor(args.raw_path, args.base_path, args.case_name, args.camera_idx, args.TEXT_PROMPT)
     sp.process()
