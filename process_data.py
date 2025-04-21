@@ -32,8 +32,9 @@ def existDir(dir_path):
 
 
 class Timer:
-    def __init__(self, logger, task_name):
+    def __init__(self, logger, task_name, case_name):
         self.task_name = task_name
+        self.case_name = case_name
         self.logger = logger
 
     def __enter__(self):
@@ -71,7 +72,7 @@ class DataProcessor:
         assert len(glob.glob(f"{self.raw_path}/{self.case_name}/depth/*")) == camera_num
         
         # Get the masks of the controller and the object using GroundedSAM2
-        with Timer(self.logger,"Video Segmentation"):
+        with Timer(self.logger,"Video Segmentation",self.case_name):
             for camera_idx in range(camera_num):
                 print(f"Processing {self.case_name} camera {camera_idx}")
                 sp = SegmentProcessor(self.raw_path,self.base_path,self.case_name,camera_idx,text_prompt)
@@ -91,59 +92,59 @@ class DataProcessor:
 
         existDir(f"{self.base_path}/{self.case_name}/shape")
         # Get the high-resolution of the image to prepare for the trellis generation
-        with Timer(self.logger,"Image Upscale"):
+        with Timer(self.logger,"Image Upscale",self.case_name):
             if not os.path.isfile(f"{self.base_path}/{self.case_name}/shape/high_resolution.png"):
                 os.system(
                     f"python ./data_process/image_upscale.py --img_path {self.base_path}/{self.case_name}/color/0/0.png --mask_path {mask_path} --output_path {self.base_path}/{self.case_name}/shape/high_resolution.png --category {category}"
                 )
 
         # Get the masked image of the object
-        with Timer(self.logger,"Image Segmentation"):
+        with Timer(self.logger,"Image Segmentation",self.case_name):
             os.system(
                 f"python ./data_process/segment_util_image.py --img_path {self.base_path}/{self.case_name}/shape/high_resolution.png --TEXT_PROMPT {self.category} --output_path {self.base_path}/{self.case_name}/shape/masked_image.png"
             )
 
-        with Timer(self.logger,"Shape Prior Generation"):
+        with Timer(self.logger,"Shape Prior Generation",self.case_name):
             os.system(
                 f"python ./data_process/shape_prior.py --img_path {self.base_path}/{self.case_name}/shape/masked_image.png --output_dir {self.base_path}/{self.case_name}/shape"
             )
 
     def _process_track(self):
         # Get the dense tracking of the object using Co-tracker
-        with Timer(self.logger,"Dense Tracking"):
+        with Timer(self.logger,"Dense Tracking",self.case_name):
             os.system(
                 f"python ./data_process/dense_track.py --base_path {self.base_path} --case_name {self.case_name}"
             )
 
     def _process_3d(self):
         # Get the pcd in the world coordinate from the raw observations
-        with Timer(self.logger,"Lift to 3D"):
+        with Timer(self.logger,"Lift to 3D",self.case_name):
             os.system(
                 f"python ./data_process/data_process_pcd.py --base_path {self.base_path} --case_name {self.case_name}"
             )
 
         # Further process and filter the noise of object and controller masks
-        with Timer(self.logger,"Mask Post-Processing"):
+        with Timer(self.logger,"Mask Post-Processing",self.case_name):
             os.system(
                 f"python ./data_process/data_process_mask.py --base_path {self.base_path} --case_name {self.case_name} --controller_name {CONTROLLER_NAME}"
             )
 
         # Process the data tracking
-        with Timer(self.logger,"Data Tracking"):
+        with Timer(self.logger,"Data Tracking",self.case_name):
             os.system(
                 f"python ./data_process/data_process_track.py --base_path {self.base_path} --case_name {self.case_name}"
             )
 
     def _process_align(self):
         # Align the shape prior with partial observation
-        with Timer(self.logger,"Alignment"):
+        with Timer(self.logger,"Alignment",self.case_name):
             os.system(
                 f"python ./data_process/align.py --base_path {self.base_path} --case_name {self.case_name} --controller_name {CONTROLLER_NAME}"
             )
 
     def _process_final(self):
         # Get the final PCD used for the inverse physics with/without the shape prior
-        with Timer(self.logger,"Final Data Generation"):
+        with Timer(self.logger,"Final Data Generation",self.case_name):
             if self.use_shape_prior:
                 os.system(
                     f"python ./data_process/data_process_sample.py --base_path {self.base_path} --case_name {self.case_name} --shape_prior"
