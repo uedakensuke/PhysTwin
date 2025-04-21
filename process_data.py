@@ -15,6 +15,7 @@ def setup_logger(log_file):
     logger.setLevel(logging.INFO)
 
     if not logger.handlers:
+        os.makedirs(os.path.dirname(log_file),exist_ok=True)
         file_handler = logging.FileHandler(log_file)
         file_handler.setFormatter(logging.Formatter("%(asctime)s - %(message)s"))
 
