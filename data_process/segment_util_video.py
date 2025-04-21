@@ -72,6 +72,7 @@ class SegmentProcessor:
         # prompt grounding dino to get the box coordinates on specific frame
         object_ids, input_boxes, image_source = self._predict_boxes(
             img_path,
+            text_prompt,
             f"{output_path}/mask_info_{camera_idx}.json"
         )
 
@@ -120,13 +121,13 @@ class SegmentProcessor:
 
         return frame_names
 
-    def _predict_boxes(self, img_path:str, mask_info_path:str):
+    def _predict_boxes(self, img_path:str, text_prompt:str, mask_info_path:str):
         image_source, image = load_image(img_path)
 
         boxes, confidences, labels = predict(
             model=self.grounding_model,
             image=image,
-            caption=self.text_prompt,
+            caption=text_prompt,
             box_threshold=BOX_THRESHOLD,
             text_threshold=TEXT_THRESHOLD,
         )
