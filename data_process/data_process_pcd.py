@@ -1,26 +1,17 @@
 # Merge the RGB-D data from multiple cameras into a single point cloud in world coordinate
 # Do some depth filtering to make the point cloud more clean
 
-import numpy as np
-import open3d as o3d
 import json
 import pickle
-import cv2
-from tqdm import tqdm
 import os
 from argparse import ArgumentParser
 
-parser = ArgumentParser()
-parser.add_argument(
-    "--base_path",
-    type=str,
-    required=True,
-)
-parser.add_argument("--case_name", type=str, required=True)
-args = parser.parse_args()
+import numpy as np
+import open3d as o3d
+import cv2
+from tqdm import tqdm
 
-base_path = args.base_path
-case_name = args.case_name
+from .utils.path import PathResolver
 
 
 # Use code from https://github.com/Jianghanxiao/Helper3D/blob/master/open3d_RGBD/src/camera/cameraHelper.py
@@ -113,136 +104,149 @@ def getPcdFromDepth(
     return points
 
 
-def get_pcd_from_data(path, frame_idx, num_cam, intrinsics, c2ws):
-    total_points = []
-    total_colors = []
-    total_masks = []
-    for i in range(num_cam):
-        color = cv2.imread(f"{path}/color/{i}/{frame_idx}.png")
-        color = cv2.cvtColor(color, cv2.COLOR_BGR2RGB)
-        color = color.astype(np.float32) / 255.0
-        depth = np.load(f"{path}/depth/{i}/{frame_idx}.npy") / 1000.0
-
-        points = getPcdFromDepth(
-            depth,
-            intrinsic=intrinsics[i],
-        )
-        masks = np.logical_and(points[:, :, 2] > 0.2, points[:, :, 2] < 1.5)
-        points_flat = points.reshape(-1, 3)
-        # Transform points to world coordinates using homogeneous transformation
-        homogeneous_points = np.hstack(
-            (points_flat, np.ones((points_flat.shape[0], 1)))
-        )
-        points_world = np.dot(c2ws[i], homogeneous_points.T).T[:, :3]
-        points_final = points_world.reshape(points.shape)
-        total_points.append(points_final)
-        total_colors.append(color)
-        total_masks.append(masks)
-    # pcd = o3d.geometry.PointCloud()
-    # visualize_points = []
-    # visualize_colors = []
-    # for i in range(num_cam):
-    #     visualize_points.append(
-    #         total_points[i][total_masks[i]].reshape(-1, 3)
-    #     )
-    #     visualize_colors.append(
-    #         total_colors[i][total_masks[i]].reshape(-1, 3)
-    #     )
-    # visualize_points = np.concatenate(visualize_points)
-    # visualize_colors = np.concatenate(visualize_colors)
-    # coordinates = o3d.geometry.TriangleMesh.create_coordinate_frame(size=0.2)
-    # mask = np.logical_and(visualize_points[:, 2] > -0.15, visualize_points[:, 0] > -0.05)
-    # mask = np.logical_and(mask, visualize_points[:, 0] < 0.4)
-    # mask = np.logical_and(mask, visualize_points[:, 1] < 0.5)
-    # mask = np.logical_and(mask, visualize_points[:, 1] > -0.2)
-    # mask = np.logical_and(mask, visualize_points[:, 2] < 0.2)
-    # visualize_points = visualize_points[mask]
-    # visualize_colors = visualize_colors[mask]
-        
-    # pcd.points = o3d.utility.Vector3dVector(np.concatenate(visualize_points).reshape(-1, 3))
-    # pcd.colors = o3d.utility.Vector3dVector(np.concatenate(visualize_colors).reshape(-1, 3))
-    # o3d.visualization.draw_geometries([pcd])
-    total_points = np.asarray(total_points)
-    total_colors = np.asarray(total_colors)
-    total_masks = np.asarray(total_masks)
-    return total_points, total_colors, total_masks
-
-
 def exist_dir(dir):
     if not os.path.exists(dir):
         os.makedirs(dir)
 
 
+class PcdProcessor:
+    def __init__(self, raw_path:str, base_path:str, case_name:str, num_cam = 3):
+        self.path = PathResolver(raw_path,base_path,case_name,num_cam)
+
+        with open(self.path.raw_camera_meta, "r") as f:
+            data = json.load(f)
+        self.intrinsics = np.array(data["intrinsics"])
+        self.frame_num = data["frame_num"]
+        self.c2ws = pickle.load(open(self.path.raw_camera_calibrate, "rb"))
+
+    def _get_pcd_from_data(self, frame_idx):
+        # 複数のカメラから得られる点群を統合して返します
+        num_cam=len(self.intrinsics)
+        total_points = []
+        total_colors = []
+        total_masks = []
+        for i in range(num_cam):
+            color = cv2.imread(self.path.get_color_frame_path(i,frame_idx))
+            color = cv2.cvtColor(color, cv2.COLOR_BGR2RGB)
+            color = color.astype(np.float32) / 255.0
+            depth = np.load(self.path.get_depth_frame_path(i,frame_idx)) / 1000.0
+
+            points = getPcdFromDepth(
+                depth,
+                intrinsic=self.intrinsics[i],
+            )
+            masks = np.logical_and(points[:, :, 2] > 0.2, points[:, :, 2] < 1.5)
+            points_flat = points.reshape(-1, 3)
+            # Transform points to world coordinates using homogeneous transformation
+            homogeneous_points = np.hstack(
+                (points_flat, np.ones((points_flat.shape[0], 1)))
+            )
+            points_world = np.dot(self.c2ws[i], homogeneous_points.T).T[:, :3]
+            points_final = points_world.reshape(points.shape)
+            total_points.append(points_final)
+            total_colors.append(color)
+            total_masks.append(masks)
+        # pcd = o3d.geometry.PointCloud()
+        # visualize_points = []
+        # visualize_colors = []
+        # for i in range(num_cam):
+        #     visualize_points.append(
+        #         total_points[i][total_masks[i]].reshape(-1, 3)
+        #     )
+        #     visualize_colors.append(
+        #         total_colors[i][total_masks[i]].reshape(-1, 3)
+        #     )
+        # visualize_points = np.concatenate(visualize_points)
+        # visualize_colors = np.concatenate(visualize_colors)
+        # coordinates = o3d.geometry.TriangleMesh.create_coordinate_frame(size=0.2)
+        # mask = np.logical_and(visualize_points[:, 2] > -0.15, visualize_points[:, 0] > -0.05)
+        # mask = np.logical_and(mask, visualize_points[:, 0] < 0.4)
+        # mask = np.logical_and(mask, visualize_points[:, 1] < 0.5)
+        # mask = np.logical_and(mask, visualize_points[:, 1] > -0.2)
+        # mask = np.logical_and(mask, visualize_points[:, 2] < 0.2)
+        # visualize_points = visualize_points[mask]
+        # visualize_colors = visualize_colors[mask]
+            
+        # pcd.points = o3d.utility.Vector3dVector(np.concatenate(visualize_points).reshape(-1, 3))
+        # pcd.colors = o3d.utility.Vector3dVector(np.concatenate(visualize_colors).reshape(-1, 3))
+        # o3d.visualization.draw_geometries([pcd])
+        total_points = np.asarray(total_points)
+        total_colors = np.asarray(total_colors)
+        total_masks = np.asarray(total_masks)
+        return total_points, total_colors, total_masks
+
+
+    def get_cameras(self):
+        cameras = []
+        # Visualize the cameras
+        for i in range(len(self.intrinsics)):
+            camera = getCamera(
+                self.c2ws[i],
+                self.intrinsics[i, 0, 0],
+                self.intrinsics[i, 1, 1],
+                self.intrinsics[i, 0, 2],
+                self.intrinsics[i, 1, 2],
+                z_flip=True,
+                scale=0.2,
+            )
+            cameras += camera
+        return cameras
+
+    def process(self):
+        vis = o3d.visualization.Visualizer()
+        vis.create_window()
+        for camera in self.get_cameras():
+            vis.add_geometry(camera)
+
+        coordinate = o3d.geometry.TriangleMesh.create_coordinate_frame(size=0.5)
+        vis.add_geometry(coordinate)
+
+        exist_dir(self.path.base_pcd_dir)
+        for i in tqdm(range(self.frame_num)):
+            points, colors, masks = self._get_pcd_from_data(i)
+
+            if i == 0:
+                pcd = o3d.geometry.PointCloud()
+                pcd.points = o3d.utility.Vector3dVector(
+                    points.reshape(-1, 3)[masks.reshape(-1)]
+                )
+                pcd.colors = o3d.utility.Vector3dVector(
+                    colors.reshape(-1, 3)[masks.reshape(-1)]
+                )
+                vis.add_geometry(pcd)
+                # Adjust the viewpoint
+                view_control = vis.get_view_control()
+                view_control.set_front([1, 0, -2])
+                view_control.set_up([0, 0, -1])
+                view_control.set_zoom(1)
+            else:
+                pcd.points = o3d.utility.Vector3dVector(
+                    points.reshape(-1, 3)[masks.reshape(-1)]
+                )
+                pcd.colors = o3d.utility.Vector3dVector(
+                    colors.reshape(-1, 3)[masks.reshape(-1)]
+                )
+                vis.update_geometry(pcd)
+
+                vis.poll_events()
+                vis.update_renderer()
+
+            np.savez(
+                self.path.get_pcd_data_path(i),
+                points=points,
+                colors=colors,
+                masks=masks,
+            )
+
 if __name__ == "__main__":
-    with open(f"{base_path}/{case_name}/metadata.json", "r") as f:
-        data = json.load(f)
-    intrinsics = np.array(data["intrinsics"])
-    WH = data["WH"]
-    frame_num = data["frame_num"]
-    print(data["serial_numbers"])
+    parser = ArgumentParser()
+    parser.add_argument(
+        "--base_path",
+        type=str,
+        required=True,
+    )
+    parser.add_argument("--case_name", type=str, required=True)
+    args = parser.parse_args()
 
-    num_cam = len(intrinsics)
-    c2ws = pickle.load(open(f"{base_path}/{case_name}/calibrate.pkl", "rb"))
-
-    exist_dir(f"{base_path}/{case_name}/pcd")
-
-    cameras = []
-    # Visualize the cameras
-    for i in range(num_cam):
-        camera = getCamera(
-            c2ws[i],
-            intrinsics[i, 0, 0],
-            intrinsics[i, 1, 1],
-            intrinsics[i, 0, 2],
-            intrinsics[i, 1, 2],
-            z_flip=True,
-            scale=0.2,
-        )
-        cameras += camera
-
-    vis = o3d.visualization.Visualizer()
-    vis.create_window()
-    for camera in cameras:
-        vis.add_geometry(camera)
-
-    coordinate = o3d.geometry.TriangleMesh.create_coordinate_frame(size=0.5)
-    vis.add_geometry(coordinate)
-
-    pcd = None
-    for i in tqdm(range(frame_num)):
-        points, colors, masks = get_pcd_from_data(
-            f"{base_path}/{case_name}", i, num_cam, intrinsics, c2ws
-        )
-
-        if i == 0:
-            pcd = o3d.geometry.PointCloud()
-            pcd.points = o3d.utility.Vector3dVector(
-                points.reshape(-1, 3)[masks.reshape(-1)]
-            )
-            pcd.colors = o3d.utility.Vector3dVector(
-                colors.reshape(-1, 3)[masks.reshape(-1)]
-            )
-            vis.add_geometry(pcd)
-            # Adjust the viewpoint
-            view_control = vis.get_view_control()
-            view_control.set_front([1, 0, -2])
-            view_control.set_up([0, 0, -1])
-            view_control.set_zoom(1)
-        else:
-            pcd.points = o3d.utility.Vector3dVector(
-                points.reshape(-1, 3)[masks.reshape(-1)]
-            )
-            pcd.colors = o3d.utility.Vector3dVector(
-                colors.reshape(-1, 3)[masks.reshape(-1)]
-            )
-            vis.update_geometry(pcd)
-
-            vis.poll_events()
-            vis.update_renderer()
-
-        np.savez(
-            f"{base_path}/{case_name}/pcd/{i}.npz",
-            points=points,
-            colors=colors,
-            masks=masks,
-        )
+    base_path = args.base_path
+    case_name = args.case_name

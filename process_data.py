@@ -9,6 +9,7 @@ from data_process.segment_util_video import SegmentVideoProcessor
 from data_process.image_upscale import UpscaleProcessor
 from data_process.segment_util_image import SegmentImageProcessor
 from data_process.shape_prior import ShapeProcessor
+from data_process.dense_track import TrackProcessor
 
 CONTROLLER_NAME = "hand"
 
@@ -71,7 +72,6 @@ class DataProcessor:
         # self._process_final()
 
     def _process_seg(self, camera_num = 3):
-        text_prompt = f"{self.category}.{CONTROLLER_NAME}"
         assert len(glob.glob(f"{self.raw_path}/{self.case_name}/depth/*")) == camera_num
         
         # Get the masks of the controller and the object using GroundedSAM2
@@ -79,54 +79,28 @@ class DataProcessor:
             for camera_idx in range(camera_num):
                 print(f"Processing {self.case_name} camera {camera_idx}")
                 svp = SegmentVideoProcessor(self.raw_path,self.base_path,self.case_name)
-                svp.process(camera_idx,text_prompt)
+                svp.process(camera_idx, f"{self.category}.{CONTROLLER_NAME}")
 
     def _process_shape_prior(self):
-        # Get the mask path for the image
-        with open(f"{self.base_path}/{self.case_name}/mask/mask_info_{0}.json", "r") as f:
-            data = json.load(f)
-        obj_idx = None
-        for key, value in data.items():
-            if value != CONTROLLER_NAME:
-                if obj_idx is not None:
-                    raise ValueError("More than one object detected.")
-                obj_idx = int(key)
-        mask_path = f"{self.base_path}/{self.case_name}/mask/0/{obj_idx}/0.png"
-
-        existDir(f"{self.base_path}/{self.case_name}/shape")
         # Get the high-resolution of the image to prepare for the trellis generation
         with Timer(self.logger,"Image Upscale",self.case_name):
-            upscale_img_path = f"{self.base_path}/{self.case_name}/shape/high_resolution.png"
-            if not os.path.isfile(upscale_img_path):
-                up = UpscaleProcessor(self.category)
-                up.process(
-                    f"{self.raw_path}/{self.case_name}/color/0/0.png",
-                    mask_path,
-                    upscale_img_path
-                )
+            up = UpscaleProcessor(self.raw_path, self.base_path, self.case_name)
+            up.process(0, self.category) # for camera 0
 
         # Get the masked image of the object
         with Timer(self.logger,"Image Segmentation",self.case_name):
-            sip = SegmentImageProcessor()
-            sip.process(
-                f"{self.base_path}/{self.case_name}/shape/high_resolution.png",
-                self.category,
-                f"{self.base_path}/{self.case_name}/shape/masked_image.png"
-            )
+            sip = SegmentImageProcessor(self.raw_path, self.base_path, self.case_name)
+            sip.process(self.category)
 
         with Timer(self.logger,"Shape Prior Generation",self.case_name):
-            sp = ShapeProcessor()
-            sp.process(
-                f"{self.base_path}/{self.case_name}/shape/masked_image.png",
-                f"{self.base_path}/{self.case_name}/shape"
-            )
+            sp = ShapeProcessor(self.raw_path, self.base_path, self.case_name)
+            sp.process()
 
     def _process_track(self):
         # Get the dense tracking of the object using Co-tracker
         with Timer(self.logger,"Dense Tracking",self.case_name):
-            os.system(
-                f"python ./data_process/dense_track.py --base_path {self.base_path} --case_name {self.case_name}"
-            )
+            tp = TrackProcessor(self.raw_path, self.base_path, self.case_name)
+            tp.process()
 
     def _process_3d(self):
         # Get the pcd in the world coordinate from the raw observations

@@ -7,19 +7,14 @@ import imageio.v3 as iio
 import cv2
 import numpy as np
 
-from utils.visualizer import Visualizer
-from utils.path import PathResolver
+from .utils.visualizer import Visualizer
+from .utils.path import PathResolver
 
 def read_mask(mask_path):
     # Convert the white mask into binary mask
     mask = cv2.imread(mask_path, cv2.IMREAD_GRAYSCALE)
     mask = mask > 0
     return mask
-
-
-def exist_dir(dir):
-    if not os.path.exists(dir):
-        os.makedirs(dir)
 
 class TrackProcessor:
     def __init__(self, raw_path:str, base_path:str, case_name:str, num_cam = 3):
@@ -28,7 +23,7 @@ class TrackProcessor:
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
 
     def process(self):
-        exist_dir(self.path.base_cotracker_dir)
+        os.makedirs(self.path.base_cotracker_dir, exist_ok=True)
 
         for i in range(self.num_cam):
             print(f"Processing {i}th camera")

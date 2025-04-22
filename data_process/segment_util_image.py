@@ -1,4 +1,6 @@
 import os
+from argparse import ArgumentParser
+
 import cv2
 import torch
 import numpy as np
@@ -6,8 +8,8 @@ from torchvision.ops import box_convert
 from sam2.build_sam import build_sam2
 from sam2.sam2_image_predictor import SAM2ImagePredictor
 from groundingdino.util.inference import load_model, load_image, predict
-from argparse import ArgumentParser
 
+from .utils.path import PathResolver
 
 DIR = os.path.dirname(__file__)
 
@@ -18,7 +20,9 @@ BOX_THRESHOLD = 0.35
 TEXT_THRESHOLD = 0.25
 
 class SegmentImageProcessor:
-    def __init__(self):
+    def __init__(self, raw_path:str, base_path:str , case_name:str):
+        self.path = PathResolver(raw_path, base_path, case_name)
+
         device = "cuda" if torch.cuda.is_available() else "cpu"
         
         # build SAM2 image predictor
@@ -44,12 +48,11 @@ class SegmentImageProcessor:
             torch.backends.cuda.matmul.allow_tf32 = True
             torch.backends.cudnn.allow_tf32 = True
 
-    def process(self, img_path:str, text_prompt:str, output_path:str):
-
+    def process(self, text_prompt:str):
         # setup the input image and text prompt for SAM 2 and Grounding DINO
         # VERY important: text queries need to be lowercased + end with a dot
 
-        image_source, image = load_image(img_path)
+        image_source, image = load_image(self.path.upscale_image_path)
 
         self.sam2_predictor.set_image(image_source)
 
@@ -84,21 +87,22 @@ class SegmentImageProcessor:
 
         print(f"Detected {len(masks)} objects")
 
-        raw_img = cv2.imread(img_path)
+        raw_img = cv2.imread(self.path.upscale_image_path)
         mask_img = (masks[0] * 255).astype(np.uint8)
 
         ref_img = np.zeros((h, w, 4), dtype=np.uint8)
         mask_bool = mask_img > 0
         ref_img[mask_bool, :3] = raw_img[mask_bool]
         ref_img[:, :, 3] = mask_bool.astype(np.uint8) * 255
-        cv2.imwrite(output_path, ref_img)
+        cv2.imwrite(self.path.masked_upscale_image_path, ref_img)
 
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument("--img_path", type=str, required=True)
-    parser.add_argument("--output_path", type=str, required=True)
-    parser.add_argument("--TEXT_PROMPT", type=str, required=True)
+    parser.add_argument("--raw_path", type=str, required=True)
+    parser.add_argument("--base_path", type=str, required=True)
+    parser.add_argument("--case_name", type=str, required=True)
+    parser.add_argument("--text_prompt", type=str, required=True)
     args = parser.parse_args()
 
-    sp = SegmentImageProcessor()
-    sp.process( args.img_path, args.TEXT_PROMPT, args.output_path)
+    sp = SegmentImageProcessor(args.raw_path, args.base_path, args.case_name, args.case_name)
+    sp.process(args.text_prompt)

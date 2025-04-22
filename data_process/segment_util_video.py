@@ -14,7 +14,7 @@ from sam2.build_sam import build_sam2_video_predictor, build_sam2
 from sam2.sam2_image_predictor import SAM2ImagePredictor
 from groundingdino.util.inference import load_model, load_image, predict
 
-from utils.path import PathResolver
+from .utils.path import PathResolver
 
 DIR = os.path.dirname(__file__)
 

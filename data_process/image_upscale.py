@@ -1,3 +1,6 @@
+import os
+import json
+
 from PIL import Image
 from diffusers import StableDiffusionUpscalePipeline
 import torch
@@ -5,40 +8,48 @@ from argparse import ArgumentParser
 import cv2
 import numpy as np
 
+from .utils.path import PathResolver
+
 class UpscaleProcessor:
-    def __init__(self, category:str, *, model_id = "stabilityai/stable-diffusion-x4-upscaler"):
-        self.category = category
+    def __init__(self, raw_path:str, base_path:str , case_name:str, *, model_id = "stabilityai/stable-diffusion-x4-upscaler"):
+        self.path = PathResolver(raw_path, base_path, case_name)
+
         # load model and scheduler
         self.pipeline = StableDiffusionUpscalePipeline.from_pretrained(
             model_id, torch_dtype=torch.float16
         ).to("cuda")
 
-    def process(self, img_path:str, mask_path:str, output_path:str):
-        # let's download an  image
-        low_res_img = Image.open(img_path).convert("RGB")
-        if mask_path is not None:
-            mask = cv2.imread(mask_path, cv2.IMREAD_GRAYSCALE)
-            bbox = np.argwhere(mask > 0.8 * 255)
-            bbox = np.min(bbox[:, 1]), np.min(bbox[:, 0]), np.max(bbox[:, 1]), np.max(bbox[:, 0])
-            center = (bbox[0] + bbox[2]) / 2, (bbox[1] + bbox[3]) / 2
-            size = max(bbox[2] - bbox[0], bbox[3] - bbox[1])
-            size = int(size * 1.2)
-            bbox = center[0] - size // 2, center[1] - size // 2, center[0] + size // 2, center[1] + size // 2
-            low_res_img = low_res_img.crop(bbox)  # type: ignore
+    def process(self, camera_idx:int, category:str):
+        output_path = self.path.upscale_image_path
+
+        if os.path.isfile(output_path):
+            return False # already exists
+
+        low_res_img = Image.open(self.path.get_color_frame_path(camera_idx,0)).convert("RGB")
+        mask = cv2.imread(self.path.get_object_mask_frame_path(camera_idx,0), cv2.IMREAD_GRAYSCALE)
+        bbox = np.argwhere(mask > 0.8 * 255)
+        bbox = np.min(bbox[:, 1]), np.min(bbox[:, 0]), np.max(bbox[:, 1]), np.max(bbox[:, 0])
+        center = (bbox[0] + bbox[2]) / 2, (bbox[1] + bbox[3]) / 2
+        size = max(bbox[2] - bbox[0], bbox[3] - bbox[1])
+        size = int(size * 1.2)
+        bbox = center[0] - size // 2, center[1] - size // 2, center[0] + size // 2, center[1] + size // 2
 
         upscaled_image = self.pipeline(
-            prompt=f"Hand manipulates a {self.category}.",
-            image=low_res_img
+            prompt=f"Hand manipulates a {category}.",
+            image=low_res_img.crop(bbox)  # type: ignore
         ).images[0]
+
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
         upscaled_image.save(output_path)
 
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument("--img_path", type=str, required=True)
-    parser.add_argument("--mask_path", type=str, default=None)
-    parser.add_argument("--output_path", type=str, required=True)
+    parser.add_argument("--raw_path", type=str, required=True)
+    parser.add_argument("--base_path", type=str, required=True)
+    parser.add_argument("--case_name", type=str, required=True)
+    parser.add_argument("--camera_idx", type=int, required=True)
     parser.add_argument("--category", type=str, required=True)
     args = parser.parse_args()
 
-    up=UpscaleProcessor(args.category)
-    up.process(args.img_path, args.mask_path, args.output_path)
+    up=UpscaleProcessor(args.raw_path, args.base_path, args.case_name)
+    up.process(args.camera_idx, args.category)
