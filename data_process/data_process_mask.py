@@ -1,14 +1,15 @@
 # Process the mask data to filter out the outliers and generate the processed masks
 
-import numpy as np
-import open3d as o3d
-import json
-from tqdm import tqdm
 import os
 import glob
-import cv2
+import json
 import pickle
 from argparse import ArgumentParser
+
+import numpy as np
+import open3d as o3d
+from tqdm import tqdm
+import cv2
 
 parser = ArgumentParser()
 parser.add_argument(

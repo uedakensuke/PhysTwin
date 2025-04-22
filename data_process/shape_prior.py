@@ -7,8 +7,8 @@ os.environ["SPCONV_ALGO"] = "native"  # Can be 'native' or 'auto', default is 'a
 
 import imageio
 from PIL import Image
-from TRELLIS.trellis.pipelines import TrellisImageTo3DPipeline
-from TRELLIS.trellis.utils import render_utils, postprocessing_utils
+from trellis.pipelines import TrellisImageTo3DPipeline
+from trellis.utils import render_utils, postprocessing_utils
 import numpy as np
 from argparse import ArgumentParser
 
