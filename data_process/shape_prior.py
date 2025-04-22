@@ -18,7 +18,8 @@ class ShapeProcessor:
         # Load a pipeline from a model folder or a Hugging Face model hub.
         self.pipeline = TrellisImageTo3DPipeline.from_pretrained(
             "JeffreyXiang/TRELLIS-image-large"
-        ).cuda()
+        )
+        self.pipeline.cuda()
 
     def process(self, img_path:str, output_dir:str):
         final_im = Image.open(img_path).convert("RGBA")
