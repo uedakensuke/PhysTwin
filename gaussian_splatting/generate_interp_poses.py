@@ -3,6 +3,7 @@ import scipy.interpolate
 import pickle
 import os
 
+WORKSPACE_DIR = "../mount/ws"
 
 def normalize(v):
     """Normalize a vector."""
@@ -70,7 +71,7 @@ def generate_interpolated_path(poses: np.ndarray,
 
 
 if __name__ == '__main__':
-    root_dir = "./data/gaussian_data"
+    root_dir = f"{WORKSPACE_DIR}/data/gaussian_data"
     for scene_name in sorted(os.listdir(root_dir)):
         scene_dir = os.path.join(root_dir, scene_name)
         print(f'Processing {scene_name}')

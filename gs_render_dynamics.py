@@ -48,8 +48,7 @@ import pickle
 
 
 def render_set(
-    output_path,
-    name,
+    render_path,
     views,
     gaussians_list,
     pipeline,
@@ -59,7 +58,6 @@ def render_set(
     disable_sh=False,
 ):
 
-    render_path = os.path.join(output_path, name)
     makedirs(render_path, exist_ok=True)
 
     # view_indices = [0, 25, 50, 75, 100, 125]
@@ -105,6 +103,7 @@ def render_set(
 
 
 def render_sets(
+    out_path:str,
     dataset: ModelParams,
     iteration: int,
     pipeline: PipelineParams,
@@ -112,11 +111,12 @@ def render_sets(
     skip_test: bool,
     separate_sh: bool,
     remove_gaussians: bool = False,
-    name: str = "dynamic",
 ):
+    case_name = dataset.source_path.split("/")[-1]
+    dynamic_scene_dir=f"{out_path}/{case_name}/dynamic" #gaussian_output_dynamicから変更
+    ctrl_pts_path = f"{out_path}/{case_name}/physics/inference.pkl"
+    
     with torch.no_grad():
-        output_path = "./gaussian_output_dynamic"
-
         bg_color = [1, 1, 1] if dataset.white_background else [0, 0, 0]
         background = torch.tensor(bg_color, dtype=torch.float32, device="cuda")
 
@@ -134,8 +134,6 @@ def render_sets(
         # gaussians = remove_gaussians_with_point_mesh_distance(gaussians, scene.mesh_sampled_points, dist_threshold=0.01)
 
         # rollout
-        exp_name = dataset.source_path.split("/")[-1]
-        ctrl_pts_path = f"./experiments/{exp_name}/inference.pkl"
         with open(ctrl_pts_path, "rb") as f:
             ctrl_pts = pickle.load(f)  # (n_frames, n_ctrl_pts, 3) ndarray
         ctrl_pts = torch.tensor(ctrl_pts, dtype=torch.float32, device="cuda")
@@ -209,8 +207,7 @@ def render_sets(
         views = scene.getTestCameras()
 
         render_set(
-            output_path,
-            name,
+            dynamic_scene_dir,
             views,
             gaussians_list,
             pipeline,
@@ -275,19 +272,21 @@ if __name__ == "__main__":
     parser = ArgumentParser(description="Testing script parameters")
     model = ModelParams(parser, sentinel=True)
     pipeline = PipelineParams(parser)
+    parser.add_argument("--inference_path", type=str, required=True)
     parser.add_argument("--iteration", default=-1, type=int)
     parser.add_argument("--skip_train", action="store_true")
     parser.add_argument("--skip_test", action="store_true")
     parser.add_argument("--quiet", action="store_true")
     parser.add_argument("--remove_gaussians", action="store_true")
-    parser.add_argument("--name", default="sceneA", type=str)
     args = get_combined_args(parser)
     print("Rendering " + args.model_path)
+    inference_path=args.inference_path
 
     # Initialize system state (RNG)
     safe_state(args.quiet)
 
     render_sets(
+        inference_path,
         model.extract(args),
         args.iteration,
         pipeline.extract(args),
@@ -295,8 +294,4 @@ if __name__ == "__main__":
         args.skip_test,
         SPARSE_ADAM_AVAILABLE,
         args.remove_gaussians,
-        args.name,
     )
-
-    with open("./rendering_finished_dynamic.txt", "a") as f:
-        f.write("Rendering finished of " + args.name + "\n")

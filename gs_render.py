@@ -33,9 +33,9 @@ import pytorch3d
 import pytorch3d.ops as ops
 
 
-def render_set(model_path, name, iteration, views, gaussians, pipeline, background, train_test_exp, separate_sh, disable_sh=False):
-    render_path = os.path.join(model_path, name, "ours_{}".format(iteration), "renders")
-    gts_path = os.path.join(model_path, name, "ours_{}".format(iteration), "gt")
+def render_set(out_path, name, iteration, views, gaussians, pipeline, background, train_test_exp, separate_sh, disable_sh=False):
+    render_path = os.path.join(out_path, name, "ours_{}".format(iteration), "renders")
+    gts_path = os.path.join(out_path, name, "ours_{}".format(iteration), "gt")
 
     # TODO: temporary debug for demo
     # scene_name = model_path.split('/')[-2]
@@ -63,7 +63,7 @@ def render_set(model_path, name, iteration, views, gaussians, pipeline, backgrou
         torchvision.utils.save_image(gt, os.path.join(gts_path, '{0:05d}'.format(idx) + ".png"))
 
 
-def render_sets(dataset : ModelParams, iteration : int, pipeline : PipelineParams, skip_train : bool, skip_test : bool, separate_sh: bool, remove_gaussians: bool = False):
+def render_sets(out_path:str, dataset : ModelParams, iteration : int, pipeline : PipelineParams, skip_train : bool, skip_test : bool, separate_sh: bool, remove_gaussians: bool = False):
     with torch.no_grad():
         gaussians = GaussianModel(dataset.sh_degree)
         scene = Scene(dataset, gaussians, load_iteration=iteration, shuffle=False)
@@ -96,10 +96,10 @@ def render_sets(dataset : ModelParams, iteration : int, pipeline : PipelineParam
         background = torch.tensor(bg_color, dtype=torch.float32, device="cuda")
 
         if not skip_train:
-            render_set(dataset.model_path, "train", scene.loaded_iter, scene.getTrainCameras(), gaussians, pipeline, background, dataset.train_test_exp, separate_sh, disable_sh=dataset.disable_sh)
+            render_set(out_path, "train", scene.loaded_iter, scene.getTrainCameras(), gaussians, pipeline, background, dataset.train_test_exp, separate_sh, disable_sh=dataset.disable_sh)
 
         if not skip_test:
-            render_set(dataset.model_path, "test", scene.loaded_iter, scene.getTestCameras(), gaussians, pipeline, background, dataset.train_test_exp, separate_sh, disable_sh=dataset.disable_sh)
+            render_set(out_path, "test", scene.loaded_iter, scene.getTestCameras(), gaussians, pipeline, background, dataset.train_test_exp, separate_sh, disable_sh=dataset.disable_sh)
 
 
 def get_ray_directions(H, W, K, device='cuda', random=False, return_uv=False, flatten=True, anti_aliasing_factor=1.0):
@@ -242,6 +242,7 @@ if __name__ == "__main__":
     parser = ArgumentParser(description="Testing script parameters")
     model = ModelParams(parser, sentinel=True)
     pipeline = PipelineParams(parser)
+    parser.add_argument("--out_dir", type=str, required=True)
     parser.add_argument("--iteration", default=-1, type=int)
     parser.add_argument("--skip_train", action="store_true")
     parser.add_argument("--skip_test", action="store_true")
@@ -249,8 +250,8 @@ if __name__ == "__main__":
     parser.add_argument("--remove_gaussians", action="store_true")
     args = get_combined_args(parser)
     print("Rendering " + args.model_path)
-
+    out_dir=args.out_dir
     # Initialize system state (RNG)
     safe_state(args.quiet)
 
-    render_sets(model.extract(args), args.iteration, pipeline.extract(args), args.skip_train, args.skip_test, SPARSE_ADAM_AVAILABLE, args.remove_gaussians)
+    render_sets(out_dir, model.extract(args), args.iteration, pipeline.extract(args), args.skip_train, args.skip_test, SPARSE_ADAM_AVAILABLE, args.remove_gaussians)

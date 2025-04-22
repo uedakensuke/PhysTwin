@@ -5,10 +5,11 @@ import pickle
 import numpy as np
 import open3d as o3d
 
-base_path = "./data/different_types"
-output_path = "./data/gaussian_data"
-CONTROLLER_NAME = "hand"
+WORKSPACE_DIR = "../mount/ws"
 
+base_path = f"{WORKSPACE_DIR}/data/different_types"
+output_path = f"{WORKSPACE_DIR}/data/gaussian_data"
+CONTROLLER_NAME = "hand"
 
 def existDir(dir_path):
     if not os.path.exists(dir_path):
@@ -17,7 +18,7 @@ def existDir(dir_path):
 
 existDir(output_path)
 
-with open("data_config.csv", newline="", encoding="utf-8") as csvfile:
+with open(f"{WORKSPACE_DIR}/data_config.csv", newline="", encoding="utf-8") as csvfile:
     reader = csv.reader(csvfile)
     for row in reader:
         case_name = row[0]

@@ -9,6 +9,15 @@ import os
 import pickle
 import json
 
+DIR = os.path.dirname(__file__)
+
+def get_train_frame(base_path,case_name):
+    # Read the train test split
+    with open(f"{base_path}/{case_name}/split.json", "r") as f:
+        split = json.load(f)
+
+    train_frame = split["train"][1]
+    return train_frame
 
 def set_all_seeds(seed):
     random.seed(seed)
@@ -26,25 +35,28 @@ set_all_seeds(seed)
 if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("--base_path", type=str, required=True)
+    parser.add_argument("--physics_sparse_path", type=str, required=True)
+    parser.add_argument("--physics_dense_path", type=str, required=True)
     parser.add_argument("--case_name", type=str, required=True)
-    parser.add_argument("--train_frame", type=int, required=True)
     args = parser.parse_args()
 
     base_path = args.base_path
+    physics_sparse_path = args.physics_sparse_path
+    physics_dense_path = args.physics_dense_path
     case_name = args.case_name
-    train_frame = args.train_frame
+    train_frame = get_train_frame(base_path, case_name)
 
     if "cloth" in case_name or "package" in case_name:
-        cfg.load_from_yaml("configs/cloth.yaml")
+        cfg.load_from_yaml(f"{DIR}/configs/cloth.yaml")
     else:
-        cfg.load_from_yaml("configs/real.yaml")
+        cfg.load_from_yaml(f"{DIR}/configs/real.yaml")
 
     print(f"[DATA TYPE]: {cfg.data_type}")
 
-    base_dir = f"experiments/{case_name}"
+    base_dir = f"{physics_dense_path}/{case_name}"
 
     # Read the first-satage optimized parameters
-    optimal_path = f"experiments_optimization/{case_name}/optimal_params.pkl"
+    optimal_path = f"{physics_sparse_path}/{case_name}/optimal_params.pkl"
     assert os.path.exists(
         optimal_path
     ), f"{case_name}: Optimal parameters not found: {optimal_path}"

@@ -41,6 +41,7 @@ import time
 import threading
 import time
 
+DIR = os.path.dirname(__file__)
 
 class InvPhyTrainerWarp:
     def __init__(
@@ -581,12 +582,12 @@ class InvPhyTrainerWarp:
         self.arrow_size = 30
 
         self.arrow_empty_orig = cv2.imread(
-            "./assets/arrow_empty.png", cv2.IMREAD_UNCHANGED
+            f"{DIR}/assets/arrow_empty.png", cv2.IMREAD_UNCHANGED
         )[:, :, [2, 1, 0, 3]]
-        self.arrow_1_orig = cv2.imread("./assets/arrow_1.png", cv2.IMREAD_UNCHANGED)[
+        self.arrow_1_orig = cv2.imread(f"{DIR}/assets/arrow_1.png", cv2.IMREAD_UNCHANGED)[
             :, :, [2, 1, 0, 3]
         ]
-        self.arrow_2_orig = cv2.imread("./assets/arrow_2.png", cv2.IMREAD_UNCHANGED)[
+        self.arrow_2_orig = cv2.imread(f"{DIR}/assets/arrow_2.png", cv2.IMREAD_UNCHANGED)[
             :, :, [2, 1, 0, 3]
         ]
 
@@ -658,10 +659,10 @@ class InvPhyTrainerWarp:
             ),  # Down
         }
 
-        self.hand_left = cv2.imread("./assets/Picture2.png", cv2.IMREAD_UNCHANGED)[
+        self.hand_left = cv2.imread(f"{DIR}/assets/Picture2.png", cv2.IMREAD_UNCHANGED)[
             :, :, [2, 1, 0, 3]
         ]
-        self.hand_right = cv2.imread("./assets/Picture1.png", cv2.IMREAD_UNCHANGED)[
+        self.hand_right = cv2.imread(f"{DIR}/assets/Picture1.png", cv2.IMREAD_UNCHANGED)[
             :, :, [2, 1, 0, 3]
         ]
 

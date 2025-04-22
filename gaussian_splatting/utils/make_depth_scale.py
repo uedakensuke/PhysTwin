@@ -65,8 +65,8 @@ def get_scales(key, cameras, images, points3d_ordered, args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--base_dir', default="../data/big_gaussians/standalone_chunks/campus")
-    parser.add_argument('--depths_dir', default="../data/big_gaussians/standalone_chunks/campus/depths_any")
+    parser.add_argument('--base_dir', default="../../mount/ws/data/big_gaussians/standalone_chunks/campus")
+    parser.add_argument('--depths_dir', default="../../mount/ws/data/big_gaussians/standalone_chunks/campus/depths_any")
     parser.add_argument('--model_type', default="bin")
     args = parser.parse_args()
 
