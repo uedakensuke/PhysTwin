@@ -100,7 +100,7 @@ class DataProcessor:
             if not os.path.isfile(upscale_img_path):
                 up = UpscaleProcessor(self.category)
                 up.process(
-                    f"{self.base_path}/{self.case_name}/color/0/0.png",
+                    f"{self.raw_path}/{self.case_name}/color/0/0.png",
                     mask_path,
                     upscale_img_path
                 )
