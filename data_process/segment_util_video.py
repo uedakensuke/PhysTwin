@@ -106,7 +106,7 @@ class SegmentVideoProcessor:
 
         # saving video to frames
         with sv.ImageSink(
-            target_dir_path=temp_video_frame_dir, overwrite=True, image_name_pattern="{:05d}.jpg"
+            target_dir_path=temp_video_frame_dir, overwrite=True, image_name_pattern="{:d}.jpg"
         ) as sink:
             for frame in tqdm(frame_generator, desc="Saving Video Frames"):
                 sink.save_image(frame)
