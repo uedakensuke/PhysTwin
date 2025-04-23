@@ -34,8 +34,8 @@ class PcdMaskProcessor:
 
         # Load the mask metadata
         self.mask_info = {
-            i:self._get_mask_info(i,controller_name)
-            for i in range(self.path.find_num_cam())
+            camera_idx:self._get_mask_info(camera_idx,controller_name)
+            for camera_idx in range(self.path.find_num_cam())
         }
 
     def _get_mask_info(self, camera_idx:int, controller_name:str):
@@ -44,13 +44,13 @@ class PcdMaskProcessor:
         mask_info = {}
         for key, value in data.items():
             if value != controller_name:
-                if "object" in mask_info[camera_idx]:
+                if "object" in mask_info:
                     # TODO: Handle the case when there are multiple objects
                     import pdb
                     pdb.set_trace()
                 mask_info["object"] = int(key)
             if value == controller_name:
-                if "controller" in mask_info[camera_idx]:
+                if "controller" in mask_info:
                     mask_info["controller"].append(int(key))
                 else:
                     mask_info["controller"] = [int(key)]
