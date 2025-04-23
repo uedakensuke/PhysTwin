@@ -27,6 +27,11 @@ class PathResolver:
 
         self.base_pcd_dir = f"{self.base_path}/{self.case_name}/pcd"
 
+    def assert_num_cam(self, num_cam:int):
+        assert len(glob.glob(f"{self.raw_color_dir}/*.mp4")) == num_cam
+        assert len(glob.glob(f"{self.raw_color_dir}/*/")) == num_cam
+        assert len(glob.glob(f"{self.raw_depth_dir}/*/")) == num_cam
+
     def get_color_frame_path(self, camera_idx:int, frame_idx:int):
         return f"{self.raw_color_dir}/{camera_idx}/{frame_idx}.png"
 
