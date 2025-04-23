@@ -27,8 +27,9 @@ def read_mask(mask_path):
 
 
 class PcdMaskProcessor:
-    def __init__(self, raw_path:str, base_path:str, case_name:str, *, controller_name="hand"):
+    def __init__(self, raw_path:str, base_path:str, case_name:str, *, controller_name="hand", show_window=False):
         self.path = PathResolver(raw_path,base_path,case_name, controller_name=controller_name)
+        self.show_window = show_window
         self.data = DataReader(self.path)
 
         # Load the mask metadata
@@ -57,8 +58,9 @@ class PcdMaskProcessor:
 
     def process(self):
 
-        vis = o3d.visualization.Visualizer()
-        vis.create_window()
+        if self.show_window:
+            vis = o3d.visualization.Visualizer()
+            vis.create_window()
 
         object_pcd = None
         controller_pcd = None
@@ -67,29 +69,30 @@ class PcdMaskProcessor:
         for i in tqdm(range(self.path.find_num_frame())):
             processed_mask, temp_object_pcd, temp_controller_pcd = self._process_pcd_mask(i)
             processed_masks[i] = processed_mask
-            if i == 0:
-                object_pcd = temp_object_pcd
-                controller_pcd = temp_controller_pcd
-                vis.add_geometry(object_pcd)
-                vis.add_geometry(controller_pcd)
-                # Adjust the viewpoint
-                view_control = vis.get_view_control()
-                view_control.set_front([1, 0, -2])
-                view_control.set_up([0, 0, -1])
-                view_control.set_zoom(1)
-            else:
-                object_pcd.points = o3d.utility.Vector3dVector(temp_object_pcd.points)
-                object_pcd.colors = o3d.utility.Vector3dVector(temp_object_pcd.colors)
-                controller_pcd.points = o3d.utility.Vector3dVector(
-                    temp_controller_pcd.points
-                )
-                controller_pcd.colors = o3d.utility.Vector3dVector(
-                    temp_controller_pcd.colors
-                )
-                vis.update_geometry(object_pcd)
-                vis.update_geometry(controller_pcd)
-                vis.poll_events()
-                vis.update_renderer()
+            if self.show_window:
+                if i == 0:
+                    object_pcd = temp_object_pcd
+                    controller_pcd = temp_controller_pcd
+                    vis.add_geometry(object_pcd)
+                    vis.add_geometry(controller_pcd)
+                    # Adjust the viewpoint
+                    view_control = vis.get_view_control()
+                    view_control.set_front([1, 0, -2])
+                    view_control.set_up([0, 0, -1])
+                    view_control.set_zoom(1)
+                else:
+                    object_pcd.points = o3d.utility.Vector3dVector(temp_object_pcd.points)
+                    object_pcd.colors = o3d.utility.Vector3dVector(temp_object_pcd.colors)
+                    controller_pcd.points = o3d.utility.Vector3dVector(
+                        temp_controller_pcd.points
+                    )
+                    controller_pcd.colors = o3d.utility.Vector3dVector(
+                        temp_controller_pcd.colors
+                    )
+                    vis.update_geometry(object_pcd)
+                    vis.update_geometry(controller_pcd)
+                    vis.poll_events()
+                    vis.update_renderer()
 
         # Save the processed masks considering both depth filter, semantic filter and outlier filter
         with open(self.path.processed_masks, "wb") as f:

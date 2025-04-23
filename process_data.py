@@ -83,44 +83,73 @@ class DataProcessor:
         with Timer(self.logger,"Video Segmentation",self.case_name):
             for camera_idx in range(camera_num):
                 print(f"Processing {self.case_name} camera {camera_idx}")
-                vsp = VideoSegmentProcessor(self.raw_path,self.base_path,self.case_name)
+                vsp = VideoSegmentProcessor(
+                    self.raw_path,
+                    self.base_path,
+                    self.case_name)
                 vsp.process(camera_idx, f"{self.category}.{CONTROLLER_NAME}")
 
     def _process_shape_prior(self):
         # Get the high-resolution of the image to prepare for the trellis generation
         with Timer(self.logger,"Image Upscale",self.case_name):
-            iup = ImageUpscaleProcessor(self.raw_path, self.base_path, self.case_name, controller_name=CONTROLLER_NAME)
+            iup = ImageUpscaleProcessor(
+                self.raw_path,
+                self.base_path,
+                self.case_name,
+                controller_name=CONTROLLER_NAME)
             iup.process(0, self.category) # for camera 0
 
         # Get the masked image of the object
         with Timer(self.logger,"Image Segmentation",self.case_name):
-            isp = ImageSegmentProcessor(self.raw_path, self.base_path, self.case_name)
+            isp = ImageSegmentProcessor(
+                self.raw_path,
+                self.base_path,
+                self.case_name)
             isp.process(self.category)
 
         with Timer(self.logger,"Shape Prior Generation",self.case_name):
-            spp = ShapePriorProcessor(self.raw_path, self.base_path, self.case_name)
+            spp = ShapePriorProcessor(
+                self.raw_path,
+                self.base_path,
+                self.case_name)
             spp.process()
 
     def _process_track(self):
         # Get the dense tracking of the object using Co-tracker
         with Timer(self.logger,"Dense Tracking",self.case_name):
-            vtp = VideoTrackProcessor(self.raw_path, self.base_path, self.case_name)
+            vtp = VideoTrackProcessor(
+                self.raw_path,
+                self.base_path,
+                self.case_name)
             vtp.process()
 
     def _process_3d(self):
         # Get the pcd in the world coordinate from the raw observations
         with Timer(self.logger,"Lift to 3D",self.case_name):
-            pep = PcdEstimateProcessor(self.raw_path, self.base_path, self.case_name)
+            pep = PcdEstimateProcessor(
+                self.raw_path,
+                self.base_path,
+                self.case_name,
+                show_window=self.show_window)
             pep.process()
 
         # Further process and filter the noise of object and controller masks
         with Timer(self.logger,"Mask Post-Processing",self.case_name):
-            pmp = PcdMaskProcessor(self.raw_path, self.base_path, self.case_name, controller_name=CONTROLLER_NAME)
+            pmp = PcdMaskProcessor(
+                self.raw_path,
+                self.base_path,
+                self.case_name,
+                controller_name=CONTROLLER_NAME,
+                show_window=self.show_window)
             pmp.process()
 
         # Process the data tracking
         with Timer(self.logger,"Data Tracking",self.case_name):
-            ptp = PcdTrackProcessor(self.raw_path, self.base_path, self.case_name, show_window=self.show_window)
+            ptp = PcdTrackProcessor(
+                self.raw_path,
+                self.base_path,
+                self.case_name,
+                show_window=self.show_window)
             ptp.process()
 
     def _process_align(self):

@@ -117,9 +117,9 @@ def exist_dir(dir):
 
 
 class PcdEstimateProcessor:
-    def __init__(self, raw_path:str, base_path:str, case_name:str, num_cam = 3):
+    def __init__(self, raw_path:str, base_path:str, case_name:str, *, show_window=False):
         self.path = PathResolver(raw_path,base_path,case_name)
-        self.num_cam = num_cam
+        self.show_window = show_window
 
         with open(self.path.raw_camera_meta, "r") as f:
             data = json.load(f)
@@ -127,14 +127,12 @@ class PcdEstimateProcessor:
         self.frame_num = data["frame_num"]
         self.c2ws = pickle.load(open(self.path.raw_camera_calibrate, "rb"))
 
-        assert num_cam == len(self.intrinsics)
-
     def _get_pcd_from_data(self, frame_idx):
         # 複数のカメラから得られる点群を統合して返します
         total_points = []
         total_colors = []
         total_masks = []
-        for i in range(self.num_cam):
+        for i in range(self.path.find_num_cam()):
             color = cv2.imread(self.path.get_color_frame_path(i,frame_idx))
             color = cv2.cvtColor(color, cv2.COLOR_BGR2RGB)
             color = color.astype(np.float32) / 255.0
@@ -202,43 +200,43 @@ class PcdEstimateProcessor:
         return cameras
 
     def process(self):
-        vis = o3d.visualization.Visualizer()
-        vis.create_window()
-        for camera in self.get_cameras():
-            vis.add_geometry(camera)
-
-        coordinate = o3d.geometry.TriangleMesh.create_coordinate_frame(size=0.5)
-        vis.add_geometry(coordinate)
+        if self.show_window:
+            vis = o3d.visualization.Visualizer()
+            vis.create_window()
+            for camera in self.get_cameras():
+                vis.add_geometry(camera)
+            coordinate = o3d.geometry.TriangleMesh.create_coordinate_frame(size=0.5)
+            vis.add_geometry(coordinate)
 
         exist_dir(self.path.base_pcd_dir)
         for i in tqdm(range(self.frame_num)):
             points, colors, masks = self._get_pcd_from_data(i)
 
-            if i == 0:
-                pcd = o3d.geometry.PointCloud()
-                pcd.points = o3d.utility.Vector3dVector(
-                    points.reshape(-1, 3)[masks.reshape(-1)]
-                )
-                pcd.colors = o3d.utility.Vector3dVector(
-                    colors.reshape(-1, 3)[masks.reshape(-1)]
-                )
-                vis.add_geometry(pcd)
-                # Adjust the viewpoint
-                view_control = vis.get_view_control()
-                view_control.set_front([1, 0, -2])
-                view_control.set_up([0, 0, -1])
-                view_control.set_zoom(1)
-            else:
-                pcd.points = o3d.utility.Vector3dVector(
-                    points.reshape(-1, 3)[masks.reshape(-1)]
-                )
-                pcd.colors = o3d.utility.Vector3dVector(
-                    colors.reshape(-1, 3)[masks.reshape(-1)]
-                )
-                vis.update_geometry(pcd)
-
-                vis.poll_events()
-                vis.update_renderer()
+            if self.show_window:
+                if i == 0:
+                    pcd = o3d.geometry.PointCloud()
+                    pcd.points = o3d.utility.Vector3dVector(
+                        points.reshape(-1, 3)[masks.reshape(-1)]
+                    )
+                    pcd.colors = o3d.utility.Vector3dVector(
+                        colors.reshape(-1, 3)[masks.reshape(-1)]
+                    )
+                    vis.add_geometry(pcd)
+                    # Adjust the viewpoint
+                    view_control = vis.get_view_control()
+                    view_control.set_front([1, 0, -2])
+                    view_control.set_up([0, 0, -1])
+                    view_control.set_zoom(1)
+                else:
+                    pcd.points = o3d.utility.Vector3dVector(
+                        points.reshape(-1, 3)[masks.reshape(-1)]
+                    )
+                    pcd.colors = o3d.utility.Vector3dVector(
+                        colors.reshape(-1, 3)[masks.reshape(-1)]
+                    )
+                    vis.update_geometry(pcd)
+                    vis.poll_events()
+                    vis.update_renderer()
 
             np.savez(
                 self.path.get_pcd_data_path(i),
@@ -252,7 +250,8 @@ if __name__ == "__main__":
     parser.add_argument("--raw_path", type=str, required=True)
     parser.add_argument("--base_path", type=str, required=True)
     parser.add_argument("--case_name", type=str, required=True)
+    parser.add_argument("--show_window", action='store_true' )
     args = parser.parse_args()
 
-    pep = PcdEstimateProcessor(args.raw_path, args.base_path, args.case_name)
+    pep = PcdEstimateProcessor(args.raw_path, args.base_path, args.case_name, show_window=args.show_window)
     pep.process()
