@@ -109,11 +109,11 @@ class DataProcessor:
             pp = PcdProcessor(self.raw_path, self.base_path, self.case_name)
             pp.process()
 
-        # # Further process and filter the noise of object and controller masks
-        # with Timer(self.logger,"Mask Post-Processing",self.case_name):
-        #     os.system(
-        #         f"python ./data_process/data_process_mask.py --base_path {self.base_path} --case_name {self.case_name} --controller_name {CONTROLLER_NAME}"
-        #     )
+        # Further process and filter the noise of object and controller masks
+        with Timer(self.logger,"Mask Post-Processing",self.case_name):
+            os.system(
+                f"python ./data_process/data_process_mask.py --base_path {self.base_path} --case_name {self.case_name} --controller_name {CONTROLLER_NAME}"
+            )
 
         # # Process the data tracking
         # with Timer(self.logger,"Data Tracking",self.case_name):

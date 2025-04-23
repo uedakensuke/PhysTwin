@@ -52,7 +52,7 @@ class SegmentImageProcessor:
         # setup the input image and text prompt for SAM 2 and Grounding DINO
         # VERY important: text queries need to be lowercased + end with a dot
 
-        image_source, image = load_image(self.path.upscale_image_path)
+        image_source, image = load_image(self.path.upscale_image)
 
         self.sam2_predictor.set_image(image_source)
 
@@ -87,14 +87,14 @@ class SegmentImageProcessor:
 
         print(f"Detected {len(masks)} objects")
 
-        raw_img = cv2.imread(self.path.upscale_image_path)
+        raw_img = cv2.imread(self.path.upscale_image)
         mask_img = (masks[0] * 255).astype(np.uint8)
 
         ref_img = np.zeros((h, w, 4), dtype=np.uint8)
         mask_bool = mask_img > 0
         ref_img[mask_bool, :3] = raw_img[mask_bool]
         ref_img[:, :, 3] = mask_bool.astype(np.uint8) * 255
-        cv2.imwrite(self.path.masked_upscale_image_path, ref_img)
+        cv2.imwrite(self.path.masked_upscale_image, ref_img)
 
 if __name__ == "__main__":
     parser = ArgumentParser()

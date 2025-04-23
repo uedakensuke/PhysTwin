@@ -178,12 +178,10 @@ class SegmentVideoProcessor:
 
         for frame_idx, masks in video_segments.items():
             for obj_id, mask in masks.items():
-                mask_frame_dir = self.path.get_mask_frame_dir(camera_idx,obj_id)
-                existDir(mask_frame_dir)
+                mask_frame_path = self.path.get_mask_frame_path(camera_idx,obj_id,frame_idx)
+                existDir(os.path.dirname(mask_frame_path))
                 # mask is 1 * H * W
-                Image.fromarray((mask[0] * 255).astype(np.uint8)).save(
-                    f"{mask_frame_dir}/{frame_idx}.png"
-                )
+                Image.fromarray((mask[0] * 255).astype(np.uint8)).save(mask_frame_path)
 
 if __name__ == "__main__":
     parser = ArgumentParser()

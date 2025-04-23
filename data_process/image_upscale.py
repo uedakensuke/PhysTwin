@@ -11,8 +11,8 @@ import numpy as np
 from .utils.path import PathResolver
 
 class UpscaleProcessor:
-    def __init__(self, raw_path:str, base_path:str , case_name:str, *, model_id = "stabilityai/stable-diffusion-x4-upscaler"):
-        self.path = PathResolver(raw_path, base_path, case_name)
+    def __init__(self, raw_path:str, base_path:str , case_name:str, *, controller_name="hand", model_id = "stabilityai/stable-diffusion-x4-upscaler"):
+        self.path = PathResolver(raw_path, base_path, case_name, controller_name=controller_name)
 
         # load model and scheduler
         self.pipeline = StableDiffusionUpscalePipeline.from_pretrained(
@@ -20,7 +20,7 @@ class UpscaleProcessor:
         ).to("cuda")
 
     def process(self, camera_idx:int, category:str):
-        output_path = self.path.upscale_image_path
+        output_path = self.path.upscale_image
 
         if os.path.isfile(output_path):
             return False # already exists
@@ -57,9 +57,10 @@ if __name__ == "__main__":
     parser.add_argument("--raw_path", type=str, required=True)
     parser.add_argument("--base_path", type=str, required=True)
     parser.add_argument("--case_name", type=str, required=True)
+    parser.add_argument("--controller_name", type=str, default="hand")
     parser.add_argument("--camera_idx", type=int, required=True)
     parser.add_argument("--category", type=str, required=True)
     args = parser.parse_args()
 
-    up=UpscaleProcessor(args.raw_path, args.base_path, args.case_name)
+    up=UpscaleProcessor(args.raw_path, args.base_path, args.case_name, controller_name=args.controller_name)
     up.process(args.camera_idx, args.category)

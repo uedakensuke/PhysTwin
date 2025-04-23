@@ -1,6 +1,6 @@
 import glob
 import json
-
+import os
 
 class PathResolver:
     def __init__(self, raw_path:str, base_path:str, case_name:str, *, controller_name="hand"):
@@ -15,10 +15,11 @@ class PathResolver:
         self.raw_camera_calibrate=f"{self.raw_path}/{self.case_name}/calibrate.pkl"
 
         self.base_mask_dir=f"{self.base_path}/{self.case_name}/mask"
+        self.processed_masks=f"{self.base_mask_dir}/processed_masks.pkl"
 
         self.base_shape_dir = f"{self.base_path}/{self.case_name}/shape"
-        self.upscale_image_path = f"{self.base_shape_dir}/high_resolution.png"
-        self.masked_upscale_image_path = f"{self.base_shape_dir}/masked_image.png"
+        self.upscale_image = f"{self.base_shape_dir}/high_resolution.png"
+        self.masked_upscale_image = f"{self.base_shape_dir}/masked_image.png"
         self.reconstruct_3d_model_glb = f"{self.base_shape_dir}/object.glb"
         self.reconstruct_3d_model_ply = f"{self.base_shape_dir}/object.ply"
         self.reconstruct_3d_model_video = f"{self.base_shape_dir}/visualization.mp4"
@@ -27,10 +28,21 @@ class PathResolver:
 
         self.base_pcd_dir = f"{self.base_path}/{self.case_name}/pcd"
 
-    def assert_num_cam(self, num_cam:int):
-        assert len(glob.glob(f"{self.raw_color_dir}/*.mp4")) == num_cam
+    def find_num_cam(self):
+        num_cam = len(glob.glob(f"{self.raw_color_dir}/*.mp4"))
         assert len(glob.glob(f"{self.raw_color_dir}/*/")) == num_cam
         assert len(glob.glob(f"{self.raw_depth_dir}/*/")) == num_cam
+        assert len(glob.glob(f"{self.base_mask_dir}/mask_info_*.json")) in [num_cam,0]
+        assert len(glob.glob(f"{self.base_mask_dir}/*/")) in [num_cam,0]
+        assert len(glob.glob(f"{self.base_cotracker_dir}/*.npz")) in [num_cam,0]
+        return num_cam
+
+    def find_num_frame(self):
+        num_frame = len(glob.glob(f"{self.raw_color_dir}/0/*.png"))
+        assert len(glob.glob(f"{self.raw_depth_dir}/0/*.npy")) == num_frame
+        assert len(glob.glob(f"{self.base_mask_dir}/0/0/*.png")) == num_frame
+        assert len(glob.glob(f"{self.base_pcd_dir}/*.npz")) == num_frame
+        return num_frame
 
     def get_color_frame_path(self, camera_idx:int, frame_idx:int):
         return f"{self.raw_color_dir}/{camera_idx}/{frame_idx}.png"
@@ -44,8 +56,8 @@ class PathResolver:
     def get_mask_info_path(self, camera_idx:int):
         return f"{self.base_mask_dir}/mask_info_{camera_idx}.json"
 
-    def get_mask_frame_dir(self, camera_idx:int, obj_idx:int):
-        return f"{self.base_mask_dir}/{camera_idx}/{obj_idx}"
+    def get_mask_frame_path(self, camera_idx:int, obj_idx:int, frame_idx:int):
+        return f"{self.base_mask_dir}/{camera_idx}/{obj_idx}/{frame_idx}.png"
 
     def get_object_mask_frame_path(self, camera_idx:int, frame_idx:int):
         # 画像中にobjectは１つであることを仮定します
@@ -61,11 +73,11 @@ class PathResolver:
                 obj_idx = int(key)
         return f"{self.base_mask_dir}/{camera_idx}/{obj_idx}/{frame_idx}.png"
 
-    def get_temp_video_frame_dir(self, camera_idx:int):
-        return f"{self.base_path}/{self.case_name}/tmp_data_{camera_idx}"
-
     def list_first_frame_mask_of_all_objects(self, camera_idx:int):
         return glob.glob(f"{self.base_mask_dir}/{camera_idx}/*/0.png")
+
+    def get_temp_video_frame_dir(self, camera_idx:int):
+        return f"{self.base_path}/{self.case_name}/tmp_data_{camera_idx}"
 
     def get_tracking_data_path(self, camera_idx:int):
         return f"{self.base_cotracker_dir}/{camera_idx}.npz"

@@ -13,6 +13,8 @@ from tqdm import tqdm
 
 from .utils.path import PathResolver
 
+DEPTH_MIN=0.2
+DEPTH_MAX=1.5
 
 # Use code from https://github.com/Jianghanxiao/Helper3D/blob/master/open3d_RGBD/src/camera/cameraHelper.py
 def getCamera(
@@ -77,6 +79,11 @@ def getPcdFromDepth(
     depth,
     intrinsic,
 ):
+    # depth[IMG_Y,IMG_X] = 画像のIMG_X,IMG_Yの位置のdepth(m単位 ※合わせてintrinsicはm単位とすること)
+    # points[IMG_Y,IMG_X,0] = 画像座標（IMG_X,IMG_Y）の点のカメラX座標
+    # points[IMG_Y,IMG_X,1] = 画像座標（IMG_X,IMG_Y）の点のカメラY座標
+    # points[IMG_Y,IMG_X,2] = 画像座標（IMG_X,IMG_Y）の点のカメラZ座標
+
     # Depth in meters
     height, width = np.shape(depth)
 
@@ -137,7 +144,7 @@ class PcdProcessor:
                 depth,
                 intrinsic=self.intrinsics[i],
             )
-            masks = np.logical_and(points[:, :, 2] > 0.2, points[:, :, 2] < 1.5)
+            masks = np.logical_and(points[:, :, 2] > DEPTH_MIN, points[:, :, 2] < DEPTH_MAX)
             points_flat = points.reshape(-1, 3)
             # Transform points to world coordinates using homogeneous transformation
             homogeneous_points = np.hstack(
@@ -242,13 +249,10 @@ class PcdProcessor:
 
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument(
-        "--base_path",
-        type=str,
-        required=True,
-    )
+    parser.add_argument("--raw_path", type=str, required=True)
+    parser.add_argument("--base_path", type=str, required=True)
     parser.add_argument("--case_name", type=str, required=True)
     args = parser.parse_args()
 
-    base_path = args.base_path
-    case_name = args.case_name
+    pp = PcdProcessor(args.raw_path, args.base_path, args.case_name)
+    pp.process()

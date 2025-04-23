@@ -10,18 +10,14 @@ import numpy as np
 
 from .utils.visualizer import Visualizer
 from .utils.path import PathResolver
+from .utils.data import DataReader
 
-def read_mask(mask_path):
-    # Convert the white mask into binary mask
-    mask = cv2.imread(mask_path, cv2.IMREAD_GRAYSCALE)
-    mask = mask > 0
-    return mask
 
 class TrackProcessor:
-    def __init__(self, raw_path:str, base_path:str, case_name:str, num_cam = 3):
+    def __init__(self, raw_path:str, base_path:str, case_name:str):
         self.path = PathResolver(raw_path,base_path,case_name)
-        self.num_cam = num_cam
-        self.path.assert_num_cam(num_cam)
+        self.data = DataReader(self.path)
+        self.num_cam = self.path.find_num_cam()
 
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -36,14 +32,7 @@ class TrackProcessor:
                 torch.tensor(frames).permute(0, 3, 1, 2)[None].float().to(self.device)
             )  # B T C H W
             # Load the first-frame mask to get all query points from all masks
-            mask = None
-            for mask_path in self.path.list_first_frame_mask_of_all_objects(i):
-                current_mask = read_mask(mask_path)
-                if mask is None:
-                    mask = current_mask
-                else:
-                    mask = np.logical_or(mask, current_mask)
-
+            mask = self.data.read_first_frame_mask_of_all_objects(i)
             # Draw the mask
             query_pixels = np.argwhere(mask)
             # Revert x and y
@@ -85,9 +74,10 @@ class TrackProcessor:
 
 if __name__ == "__main__":
     parser = ArgumentParser()
+    parser.add_argument("--raw_path", type=str, required=True)
     parser.add_argument("--base_path", type=str, required=True)
     parser.add_argument("--case_name", type=str, required=True)
     args = parser.parse_args()
 
-    tp = TrackProcessor(args.base_path, args.case_name)
+    tp = TrackProcessor(args.raw_path, args.base_path, args.case_name)
     tp.process()

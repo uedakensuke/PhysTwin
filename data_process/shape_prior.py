@@ -22,7 +22,7 @@ class ShapeProcessor:
         self.pipeline.cuda()
 
     def process(self):
-        final_im = Image.open(self.path.masked_upscale_image_path).convert("RGBA")
+        final_im = Image.open(self.path.masked_upscale_image).convert("RGBA")
         assert not np.all(np.array(final_im)[:, :, 3] == 255)
 
         # Run the pipeline

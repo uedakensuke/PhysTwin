@@ -11,21 +11,8 @@ import open3d as o3d
 from tqdm import tqdm
 import cv2
 
-parser = ArgumentParser()
-parser.add_argument(
-    "--base_path",
-    type=str,
-    required=True,
-)
-parser.add_argument("--case_name", type=str, required=True)
-parser.add_argument("--controller_name", type=str, required=True)
-args = parser.parse_args()
-
-base_path = args.base_path
-case_name = args.case_name
-CONTROLLER_NAME = args.controller_name
-
-processed_masks = {}
+from .utils.path import PathResolver
+from .utils.data import DataReader
 
 
 def exist_dir(dir):
@@ -40,215 +27,190 @@ def read_mask(mask_path):
     return mask
 
 
-def process_pcd_mask(frame_idx, pcd_path, mask_path, mask_info, num_cam):
-    global processed_masks
-    processed_masks[frame_idx] = {}
+class MaskProcessor:
+    def __init__(self, raw_path:str, base_path:str, case_name:str, *, controller_name="hand"):
+        self.path = PathResolver(raw_path,base_path,case_name, controller_name=controller_name)
+        self.data = DataReader(self.path)
 
-    # Load the pcd data
-    data = np.load(f"{pcd_path}/{frame_idx}.npz")
-    points = data["points"]
-    colors = data["colors"]
-    masks = data["masks"]
+        # Load the mask metadata
+        self.mask_info = {
+            i:self._get_mask_info(i,controller_name)
+            for i in range(self.path.find_num_cam())
+        }
 
-    object_pcd = o3d.geometry.PointCloud()
-    controller_pcd = o3d.geometry.PointCloud()
+    def _get_mask_info(self, camera_idx:int, controller_name:str):
+        with open(self.path.get_mask_info_path(camera_idx), "r") as f:
+            data = json.load(f)
+        mask_info = {}
+        for key, value in data.items():
+            if value != controller_name:
+                if "object" in mask_info[camera_idx]:
+                    # TODO: Handle the case when there are multiple objects
+                    import pdb
+                    pdb.set_trace()
+                mask_info["object"] = int(key)
+            if value == controller_name:
+                if "controller" in mask_info[camera_idx]:
+                    mask_info["controller"].append(int(key))
+                else:
+                    mask_info["controller"] = [int(key)]
+        return mask_info
 
-    for i in range(num_cam):
-        # Load the object mask
-        object_idx = mask_info[i]["object"]
-        mask = read_mask(f"{mask_path}/{i}/{object_idx}/{frame_idx}.png")
-        object_mask = np.logical_and(masks[i], mask)
-        object_points = points[i][object_mask]
-        object_colors = colors[i][object_mask]
-        pcd = o3d.geometry.PointCloud()
-        pcd.points = o3d.utility.Vector3dVector(object_points)
-        pcd.colors = o3d.utility.Vector3dVector(object_colors)
-        object_pcd += pcd
+    def process(self):
 
-        # Load the controller mask
-        controller_mask = np.zeros_like(masks[i])
-        for controller_idx in mask_info[i]["controller"]:
-            mask = read_mask(f"{mask_path}/{i}/{controller_idx}/{frame_idx}.png")
-            controller_mask = np.logical_or(controller_mask, mask)
-        controller_mask = np.logical_and(masks[i], controller_mask)
-        controller_points = points[i][controller_mask]
-        controller_colors = colors[i][controller_mask]
+        vis = o3d.visualization.Visualizer()
+        vis.create_window()
 
-        pcd = o3d.geometry.PointCloud()
-        pcd.points = o3d.utility.Vector3dVector(controller_points)
-        pcd.colors = o3d.utility.Vector3dVector(controller_colors)
-        controller_pcd += pcd
+        object_pcd = None
+        controller_pcd = None
+        processed_masks = {}
 
-    # Apply the outlier removal
-    cl, ind = object_pcd.remove_radius_outlier(nb_points=40, radius=0.01)
-    filtered_object_points = np.asarray(
-        object_pcd.select_by_index(ind, invert=True).points
-    )
-    object_pcd = object_pcd.select_by_index(ind)
+        for i in tqdm(range(self.path.find_num_frame())):
+            processed_mask, temp_object_pcd, temp_controller_pcd = self._process_pcd_mask(i)
+            processed_masks[i] = processed_mask
+            if i == 0:
+                object_pcd = temp_object_pcd
+                controller_pcd = temp_controller_pcd
+                vis.add_geometry(object_pcd)
+                vis.add_geometry(controller_pcd)
+                # Adjust the viewpoint
+                view_control = vis.get_view_control()
+                view_control.set_front([1, 0, -2])
+                view_control.set_up([0, 0, -1])
+                view_control.set_zoom(1)
+            else:
+                object_pcd.points = o3d.utility.Vector3dVector(temp_object_pcd.points)
+                object_pcd.colors = o3d.utility.Vector3dVector(temp_object_pcd.colors)
+                controller_pcd.points = o3d.utility.Vector3dVector(
+                    temp_controller_pcd.points
+                )
+                controller_pcd.colors = o3d.utility.Vector3dVector(
+                    temp_controller_pcd.colors
+                )
+                vis.update_geometry(object_pcd)
+                vis.update_geometry(controller_pcd)
+                vis.poll_events()
+                vis.update_renderer()
 
-    cl, ind = controller_pcd.remove_radius_outlier(nb_points=40, radius=0.01)
-    filtered_controller_points = np.asarray(
-        controller_pcd.select_by_index(ind, invert=True).points
-    )
-    controller_pcd = controller_pcd.select_by_index(ind)
+        # Save the processed masks considering both depth filter, semantic filter and outlier filter
+        with open(self.path.processed_masks, "wb") as f:
+            pickle.dump(processed_masks, f)
 
-    # controller_pcd.paint_uniform_color([1, 0, 0])
-    # o3d.visualization.draw_geometries([object_pcd, controller_pcd])
-    object_pcd = o3d.geometry.PointCloud()
-    controller_pcd = o3d.geometry.PointCloud()
-    for i in range(num_cam):
-        processed_masks[frame_idx][i] = {}
-        # Load the object mask
-        object_idx = mask_info[i]["object"]
-        mask = read_mask(f"{mask_path}/{i}/{object_idx}/{frame_idx}.png")
-        object_mask = np.logical_and(masks[i], mask)
-        object_points = points[i][object_mask]
-        indices = np.nonzero(object_mask)
+    def _create_rough_masked_pcd_from_all_camera(self, pcd_data:dict, frame_idx:int):
+        # pcd_data["masks"] : array of shape[IMG_HEIGHT,IMG_WIDTH]. 値は深度有効範囲（0.2m～1.5m）内に点があるかのフラグ
+        object_pcd = o3d.geometry.PointCloud()
+        controller_pcd = o3d.geometry.PointCloud()
+        for i in range(self.path.find_num_cam()):
+            # Load the object mask
+            object_mask = self.data.read_mask_frame(i, self.mask_info[i]["object"], frame_idx)
+            pcd, _ = self._create_masked_pcd(pcd_data,object_mask,i)
+            object_pcd += pcd
+
+            # Load the controller mask
+            controllers_mask = np.zeros_like(pcd_data["masks"][i])
+            for controller_idx in self.mask_info[i]["controller"]:
+                controller_mask = self.data.read_mask_frame(i, controller_idx, frame_idx)
+                controllers_mask = np.logical_or(controllers_mask, controller_mask)
+            pcd, _ = self._create_masked_pcd(pcd_data,controllers_mask,i)
+            controller_pcd += pcd
+        return object_pcd, controller_pcd
+
+    @staticmethod
+    def _get_processed_mask(mask, target_points, target_outlier_points):
+        indices = np.nonzero(mask)
         indices_list = list(zip(indices[0], indices[1]))
         # Locate all the object_points in the filtered points
         object_indices = []
-        for j, point in enumerate(object_points):
-            if tuple(point) in filtered_object_points:
+        for j, point in enumerate(target_points):
+            if tuple(point) in target_outlier_points:
                 object_indices.append(j)
         original_indices = [indices_list[j] for j in object_indices]
         # Update the object mask
         for idx in original_indices:
-            object_mask[idx[0], idx[1]] = 0
-        processed_masks[frame_idx][i]["object"] = object_mask
+            mask[idx[0], idx[1]] = 0
+        return mask
 
-        # Load the controller mask
-        controller_mask = np.zeros_like(masks[i])
-        for controller_idx in mask_info[i]["controller"]:
-            mask = read_mask(f"{mask_path}/{i}/{controller_idx}/{frame_idx}.png")
-            controller_mask = np.logical_or(controller_mask, mask)
-        controller_mask = np.logical_and(masks[i], controller_mask)
-        controller_points = points[i][controller_mask]
-        indices = np.nonzero(controller_mask)
-        indices_list = list(zip(indices[0], indices[1]))
-        # Locate all the controller_points in the filtered points
-        controller_indices = []
-        for j, point in enumerate(controller_points):
-            if tuple(point) in filtered_controller_points:
-                controller_indices.append(j)
-        original_indices = [indices_list[j] for j in controller_indices]
-        # Update the controller mask
-        for idx in original_indices:
-            controller_mask[idx[0], idx[1]] = 0
-        processed_masks[frame_idx][i]["controller"] = controller_mask
+    def _create_masked_pcd(self, pcd_data:dict, mask, camera_idx:int, outlier_points=None):
+        valid_mask = np.logical_and(pcd_data["masks"][camera_idx], mask)
+
+        if outlier_points is not None:
+            points = pcd_data["points"][camera_idx][valid_mask]
+            processed_mask = self._get_processed_mask(valid_mask, points, outlier_points)
+        else:
+            processed_mask=valid_mask
 
         pcd = o3d.geometry.PointCloud()
-        pcd.points = o3d.utility.Vector3dVector(points[i][object_mask])
-        pcd.colors = o3d.utility.Vector3dVector(colors[i][object_mask])
+        pcd.points = o3d.utility.Vector3dVector(pcd_data["points"][camera_idx][processed_mask])
+        pcd.colors = o3d.utility.Vector3dVector(pcd_data["colors"][camera_idx][processed_mask])
+        return pcd,processed_mask
 
-        object_pcd += pcd
+    def _create_fine_masked_pcd_from_all_camera(self, pcd_data:dict, frame_idx:int, object_outlier_points, controller_outlier_points):
+        # pcd_data["masks"] : array of shape[IMG_HEIGHT,IMG_WIDTH]. 値は深度有効範囲（0.2m～1.5m）内に点があるかのフラグ
+        num_cam = self.path.find_num_cam()
 
-        pcd = o3d.geometry.PointCloud()
-        pcd.points = o3d.utility.Vector3dVector(points[i][controller_mask])
-        pcd.colors = o3d.utility.Vector3dVector(colors[i][controller_mask])
+        processed_mask= {}
+        object_pcd = o3d.geometry.PointCloud()
+        controller_pcd = o3d.geometry.PointCloud()
+        for i in range(num_cam):
+            processed_mask[i] = {}
+            # Load the object mask
+            object_mask = self.data.read_mask_frame(i, self.mask_info[i]["object"], frame_idx)
+            pcd, object_processed_mask = self._create_masked_pcd(
+                pcd_data,
+                object_mask,
+                i,
+                object_outlier_points
+            )
+            object_pcd += pcd
+            processed_mask[i]["object"] = object_processed_mask
 
-        controller_pcd += pcd
+            # Load the controller mask
+            controllers_mask = np.zeros_like(pcd_data["masks"][i])
+            for controller_idx in self.mask_info[i]["controller"]:
+                controllers_mask = np.logical_or(
+                    controllers_mask,
+                    self.data.read_mask_frame(i, controller_idx, frame_idx)
+                )
+            pcd, controller_processed_mask = self._create_masked_pcd(
+                pcd_data,
+                controllers_mask,
+                i,
+                controller_outlier_points
+            )
+            controller_pcd += pcd
+            processed_mask[i]["controller"] = controller_processed_mask
 
-    # o3d.visualization.draw_geometries([object_pcd, controller_pcd])
+        return processed_mask, object_pcd, controller_pcd
+    
+    @staticmethod
+    def _get_outlier(pcd):
+        cl, ind = pcd.remove_radius_outlier(nb_points=40, radius=0.01)
+        outlier_points = np.asarray(
+            pcd.select_by_index(ind, invert=True).points
+        )
+        return outlier_points
 
-    return object_pcd, controller_pcd
+    def _process_pcd_mask(self, frame_idx:int):
+        # Load the pcd data
+        pcd_data = np.load(self.path.get_pcd_data_path(frame_idx))
+        object_pcd, controller_pcd = self._create_rough_masked_pcd_from_all_camera(
+            pcd_data, frame_idx)
+        object_outlier_points = self._get_outlier(object_pcd)
+        controller_outlier_points  =  self._get_outlier(controller_pcd)
+        processed_mask, object_pcd, controller_pcd = self._create_fine_masked_pcd_from_all_camera(
+            pcd_data, frame_idx, object_outlier_points, controller_outlier_points)
+        # controller_pcd.paint_uniform_color([1, 0, 0])
+        # o3d.visualization.draw_geometries([object_pcd, controller_pcd])
+        return processed_mask, object_pcd, controller_pcd
 
 
 if __name__ == "__main__":
-    pcd_path = f"{base_path}/{case_name}/pcd"
-    mask_path = f"{base_path}/{case_name}/mask"
+    parser = ArgumentParser()
+    parser.add_argument("--raw_path", type=str, required=True)
+    parser.add_argument("--base_path", type=str, required=True)
+    parser.add_argument("--case_name", type=str, required=True)
+    parser.add_argument("--controller_name", type=str, default="hand")
+    args = parser.parse_args()
 
-    num_cam = len(glob.glob(f"{mask_path}/mask_info_*.json"))
-    frame_num = len(glob.glob(f"{pcd_path}/*.npz"))
-    # Load the mask metadata
-    mask_info = {}
-    for i in range(num_cam):
-        with open(f"{base_path}/{case_name}/mask/mask_info_{i}.json", "r") as f:
-            data = json.load(f)
-        mask_info[i] = {}
-        for key, value in data.items():
-            if value != CONTROLLER_NAME:
-                if "object" in mask_info[i]:
-                    # TODO: Handle the case when there are multiple objects
-                    import pdb
-                    pdb.set_trace()
-                mask_info[i]["object"] = int(key)
-            if value == CONTROLLER_NAME:
-                if "controller" in mask_info[i]:
-                    mask_info[i]["controller"].append(int(key))
-                else:
-                    mask_info[i]["controller"] = [int(key)]
-
-    vis = o3d.visualization.Visualizer()
-    vis.create_window()
-
-    object_pcd = None
-    controller_pcd = None
-    for i in tqdm(range(frame_num)):
-        temp_object_pcd, temp_controller_pcd = process_pcd_mask(
-            i, pcd_path, mask_path, mask_info, num_cam
-        )
-        if i == 0:
-            object_pcd = temp_object_pcd
-            controller_pcd = temp_controller_pcd
-            vis.add_geometry(object_pcd)
-            vis.add_geometry(controller_pcd)
-            # Adjust the viewpoint
-            view_control = vis.get_view_control()
-            view_control.set_front([1, 0, -2])
-            view_control.set_up([0, 0, -1])
-            view_control.set_zoom(1)
-        else:
-            object_pcd.points = o3d.utility.Vector3dVector(temp_object_pcd.points)
-            object_pcd.colors = o3d.utility.Vector3dVector(temp_object_pcd.colors)
-            controller_pcd.points = o3d.utility.Vector3dVector(
-                temp_controller_pcd.points
-            )
-            controller_pcd.colors = o3d.utility.Vector3dVector(
-                temp_controller_pcd.colors
-            )
-            vis.update_geometry(object_pcd)
-            vis.update_geometry(controller_pcd)
-            vis.poll_events()
-            vis.update_renderer()
-
-    # Save the processed masks considering both depth filter, semantic filter and outlier filter
-    with open(f"{base_path}/{case_name}/mask/processed_masks.pkl", "wb") as f:
-        pickle.dump(processed_masks, f)
-
-    # Deprecated for now
-    # # Generate the videos with for masked objects and controllers
-    # exist_dir(f"{base_path}/{case_name}/temp_mask")
-    # for i in range(num_cam):
-    #     exist_dir(f"{base_path}/{case_name}/temp_mask/{i}")
-    #     exist_dir(f"{base_path}/{case_name}/temp_mask/{i}/object")
-    #     exist_dir(f"{base_path}/{case_name}/temp_mask/{i}/controller")
-    #     object_idx = mask_info[i]["object"]
-    #     for frame_idx in range(frame_num):
-    #         object_mask = read_mask(f"{mask_path}/{i}/{object_idx}/{frame_idx}.png")
-    #         img = cv2.imread(f"{base_path}/{case_name}/color/{i}/{frame_idx}.png")
-    #         masked_object_img = cv2.bitwise_and(
-    #             img, img, mask=object_mask.astype(np.uint8) * 255
-    #         )
-    #         cv2.imwrite(
-    #             f"{base_path}/{case_name}/temp_mask/{i}/object/{frame_idx}.png",
-    #             masked_object_img,
-    #         )
-
-    #         controller_mask = np.zeros_like(object_mask)
-    #         for controller_idx in mask_info[i]["controller"]:
-    #             mask = read_mask(f"{mask_path}/{i}/{controller_idx}/{frame_idx}.png")
-    #             controller_mask = np.logical_or(controller_mask, mask)
-    #         masked_controller_img = cv2.bitwise_and(
-    #             img, img, mask=controller_mask.astype(np.uint8) * 255
-    #         )
-    #         cv2.imwrite(
-    #             f"{base_path}/{case_name}/temp_mask/{i}/controller/{frame_idx}.png",
-    #             masked_controller_img,
-    #         )
-
-    #     os.system(
-    #         f"ffmpeg -r 30 -start_number 0 -f image2 -i {base_path}/{case_name}/temp_mask/{i}/object/%d.png -vcodec libx264 -crf 0  -pix_fmt yuv420p {base_path}/{case_name}/temp_mask/object_{i}.mp4"
-    #     )
-    #     os.system(
-    #         f"ffmpeg -r 30 -start_number 0 -f image2 -i {base_path}/{case_name}/temp_mask/{i}/controller/%d.png -vcodec libx264 -crf 0  -pix_fmt yuv420p {base_path}/{case_name}/temp_mask/controller_{i}.mp4"
-    #     )
+    mp = MaskProcessor(args.raw_path, args.base_path, args.case_name, controller_name=args.controller_name)
+    mp.process()
