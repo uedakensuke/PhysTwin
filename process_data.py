@@ -11,6 +11,7 @@ from data_process.segment_util_image import SegmentImageProcessor
 from data_process.shape_prior import ShapeProcessor
 from data_process.dense_track import TrackProcessor
 from data_process.data_process_pcd import PcdProcessor
+from data_process.data_process_mask import MaskProcessor
 
 CONTROLLER_NAME = "hand"
 
@@ -63,11 +64,11 @@ class DataProcessor:
         self.category, self.use_shape_prior = _read_config(raw_path, case_name)
 
     def process(self):
-        self._process_seg()
-        if self.use_shape_prior:
-            self._process_shape_prior() #実行には_process_segの実行が必要
-        self._process_track() #実行には_process_segの実行が必要。_process_shape_priorは不要
-        # self._process_3d()
+        # self._process_seg()
+        # if self.use_shape_prior:
+        #     self._process_shape_prior() #実行には_process_segの実行が必要
+        # self._process_track() #実行には_process_segの実行が必要。_process_shape_priorは不要
+        self._process_3d()
         # if self.use_shape_prior:
         #     self._process_align()
         # self._process_final()
@@ -85,7 +86,7 @@ class DataProcessor:
     def _process_shape_prior(self):
         # Get the high-resolution of the image to prepare for the trellis generation
         with Timer(self.logger,"Image Upscale",self.case_name):
-            up = UpscaleProcessor(self.raw_path, self.base_path, self.case_name)
+            up = UpscaleProcessor(self.raw_path, self.base_path, self.case_name, controller_name=CONTROLLER_NAME)
             up.process(0, self.category) # for camera 0
 
         # Get the masked image of the object
@@ -111,9 +112,8 @@ class DataProcessor:
 
         # Further process and filter the noise of object and controller masks
         with Timer(self.logger,"Mask Post-Processing",self.case_name):
-            os.system(
-                f"python ./data_process/data_process_mask.py --base_path {self.base_path} --case_name {self.case_name} --controller_name {CONTROLLER_NAME}"
-            )
+            mp = MaskProcessor(self.raw_path, self.base_path, self.case_name, controller_name=CONTROLLER_NAME)
+            mp.process()
 
         # # Process the data tracking
         # with Timer(self.logger,"Data Tracking",self.case_name):
