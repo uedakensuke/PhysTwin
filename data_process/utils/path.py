@@ -3,20 +3,16 @@ import json
 
 
 class PathResolver:
-    def __init__(self, raw_path:str, base_path:str, case_name:str, num_cam = 3, *, controller_name="hand"):
+    def __init__(self, raw_path:str, base_path:str, case_name:str, *, controller_name="hand"):
         self.raw_path = raw_path
         self.base_path = base_path
         self.case_name = case_name
-        self.num_cam = num_cam
         self.controller_name = controller_name
 
         self.raw_color_dir=f"{self.raw_path}/{self.case_name}/color"
         self.raw_depth_dir=f"{self.raw_path}/{self.case_name}/depth"
         self.raw_camera_meta=f"{self.raw_path}/{self.case_name}/metadata.json"
         self.raw_camera_calibrate=f"{self.raw_path}/{self.case_name}/calibrate.pkl"
-
-
-        assert len(glob.glob(f"{self.raw_depth_dir}/*")) == num_cam
 
         self.base_mask_dir=f"{self.base_path}/{self.case_name}/mask"
 

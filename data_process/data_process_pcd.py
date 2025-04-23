@@ -111,7 +111,8 @@ def exist_dir(dir):
 
 class PcdProcessor:
     def __init__(self, raw_path:str, base_path:str, case_name:str, num_cam = 3):
-        self.path = PathResolver(raw_path,base_path,case_name,num_cam)
+        self.path = PathResolver(raw_path,base_path,case_name)
+        self.num_cam = num_cam
 
         with open(self.path.raw_camera_meta, "r") as f:
             data = json.load(f)
@@ -119,13 +120,14 @@ class PcdProcessor:
         self.frame_num = data["frame_num"]
         self.c2ws = pickle.load(open(self.path.raw_camera_calibrate, "rb"))
 
+        assert num_cam == len(self.intrinsics)
+
     def _get_pcd_from_data(self, frame_idx):
         # 複数のカメラから得られる点群を統合して返します
-        num_cam=len(self.intrinsics)
         total_points = []
         total_colors = []
         total_masks = []
-        for i in range(num_cam):
+        for i in range(self.num_cam):
             color = cv2.imread(self.path.get_color_frame_path(i,frame_idx))
             color = cv2.cvtColor(color, cv2.COLOR_BGR2RGB)
             color = color.astype(np.float32) / 255.0

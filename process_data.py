@@ -64,8 +64,8 @@ class DataProcessor:
     def process(self):
         self._process_seg()
         if self.use_shape_prior:
-            self._process_shape_prior()
-        # self._process_track()
+            self._process_shape_prior() #実行には_process_segの実行が必要
+        self._process_track() #実行には_process_segの実行が必要。_process_shape_priorは不要
         # self._process_3d()
         # if self.use_shape_prior:
         #     self._process_align()

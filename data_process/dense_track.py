@@ -1,5 +1,6 @@
 # Use co-tracker to track the ibject and controller in the video (pick 5000 pixels in the masked area)
 import os
+import glob
 from argparse import ArgumentParser
 
 import torch
@@ -18,7 +19,9 @@ def read_mask(mask_path):
 
 class TrackProcessor:
     def __init__(self, raw_path:str, base_path:str, case_name:str, num_cam = 3):
-        self.path = PathResolver(raw_path,base_path,case_name,num_cam)
+        assert len(glob.glob(f"{self.raw_depth_dir}/*")) == num_cam
+        self.path = PathResolver(raw_path,base_path,case_name)
+        self.num_cam = num_cam
 
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
 
