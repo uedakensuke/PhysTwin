@@ -11,7 +11,7 @@ from tqdm import tqdm
 import cv2
 
 from .utils.path import PathResolver
-from .utils.data import DataReader
+from .utils.data import ImageReader
 
 
 def exist_dir(dir):
@@ -30,7 +30,7 @@ class PcdMaskProcessor:
     def __init__(self, raw_path:str, base_path:str, case_name:str, *, controller_name="hand", show_window=False):
         self.path = PathResolver(raw_path,base_path,case_name, controller_name=controller_name)
         self.show_window = show_window
-        self.data = DataReader(self.path)
+        self.data = ImageReader(self.path)
 
         # Load the mask metadata
         self.mask_info = {
@@ -95,7 +95,7 @@ class PcdMaskProcessor:
                     vis.update_renderer()
 
         # Save the processed masks considering both depth filter, semantic filter and outlier filter
-        with open(self.path.processed_masks, "wb") as f:
+        with open(self.path.processed_masks_pkl, "wb") as f:
             pickle.dump(processed_masks, f)
 
     def _create_rough_masked_pcd_from_all_camera(self, pcd_data:dict, frame_idx:int):

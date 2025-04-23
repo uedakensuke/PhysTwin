@@ -121,11 +121,11 @@ class PcdEstimateProcessor:
         self.path = PathResolver(raw_path,base_path,case_name)
         self.show_window = show_window
 
-        with open(self.path.raw_camera_meta, "r") as f:
+        with open(self.path.camera_metadata, "r") as f:
             data = json.load(f)
         self.intrinsics = np.array(data["intrinsics"])
         self.frame_num = data["frame_num"]
-        self.c2ws = pickle.load(open(self.path.raw_camera_calibrate, "rb"))
+        self.c2ws = pickle.load(open(self.path.camera_calibrate_pkl, "rb"))
 
     def _get_pcd_from_data(self, frame_idx):
         # 複数のカメラから得られる点群を統合して返します

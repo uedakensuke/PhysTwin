@@ -13,6 +13,7 @@ from data_process.dense_track import VideoTrackProcessor
 from data_process.data_process_pcd import PcdEstimateProcessor
 from data_process.data_process_mask import PcdMaskProcessor
 from data_process.data_process_track import PcdTrackProcessor
+from data_process.align import AlignProcessor
 
 CONTROLLER_NAME = "hand"
 
@@ -71,9 +72,9 @@ class DataProcessor:
         # if self.use_shape_prior:
         #     self._process_shape_prior() #実行には_process_segの実行が必要
         # self._process_track() #実行には_process_segの実行が必要。_process_shape_priorは不要
-        self._process_3d()
-        # if self.use_shape_prior:
-        #     self._process_align()
+        # self._process_3d()
+        if self.use_shape_prior:
+            self._process_align()
         # self._process_final()
 
     def _process_seg(self, camera_num = 3):
@@ -155,9 +156,13 @@ class DataProcessor:
     def _process_align(self):
         # Align the shape prior with partial observation
         with Timer(self.logger,"Alignment",self.case_name):
-            os.system(
-                f"python ./data_process/align.py --base_path {self.base_path} --case_name {self.case_name} --controller_name {CONTROLLER_NAME}"
-            )
+            ap = AlignProcessor(
+                self.raw_path,
+                self.base_path,
+                self.case_name,
+                controller_name=CONTROLLER_NAME,
+                show_window=self.show_window)
+            ap.process()
 
     def _process_final(self):
         # Get the final PCD used for the inverse physics with/without the shape prior

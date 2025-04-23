@@ -1,7 +1,6 @@
 # FIlter the tracking based on the object and controller mask, filter the track based on the neighbour motion
 # Get the nearest controller points that are valid across all frames
 import os
-import glob
 import pickle
 from argparse import ArgumentParser
 
@@ -313,7 +312,7 @@ class PcdTrackProcessor:
 
         final_track_data = get_final_track_data(filtered_motion_track_data)
 
-        with open(self.path.tarck_process_data, "wb") as f:
+        with open(self.path.tarck_process_data_pkl, "wb") as f:
             pickle.dump(final_track_data, f)
 
         if self.show_window:
@@ -323,7 +322,7 @@ class PcdTrackProcessor:
     def _filter_track(self):
         frame_num = self.path.find_num_frame()
 
-        with open(self.path.processed_masks, "rb") as f:
+        with open(self.path.processed_masks_pkl, "rb") as f:
             processed_masks = pickle.load(f)
 
         # Filter out the points not valid in the first frame

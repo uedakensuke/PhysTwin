@@ -45,8 +45,6 @@
 # %BANNER_END%
 
 from pathlib import Path
-import argparse
-import random
 import numpy as np
 import matplotlib.cm as cm
 import torch

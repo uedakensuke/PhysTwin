@@ -166,7 +166,7 @@ def sample_camera_poses(radius, num_samples, num_up_samples=4, device="cpu"):
     return torch.tensor(np.array(camera_poses), device=device)
 
 
-def render_image(mesh, camera_poses, width=640, height=480, fov=1, device="cpu"):
+def render_image(mesh_path, camera_poses, width=640, height=480, fov=1, device="cpu"):
     camera_poses = torch.tensor(camera_poses, device=device)
     if len(camera_poses.shape) == 2:
         camera_poses = camera_poses[None, :]
@@ -176,7 +176,7 @@ def render_image(mesh, camera_poses, width=640, height=480, fov=1, device="cpu")
 
     io = IO()
     io.register_meshes_format(MeshGlbFormat())
-    mesh = io.load_mesh(mesh)
+    mesh = io.load_mesh(mesh_path)
     mesh = mesh.to(device)
 
     R = camera_poses[:, :3, :3]
@@ -186,13 +186,8 @@ def render_image(mesh, camera_poses, width=640, height=480, fov=1, device="cpu")
         R=R,
         T=T,
         device=device,
-        focal_length=torch.ones(num_poses, 1)
-        * 0.5
-        * width
-        / np.tan(fov / 2),  # Calculate focal length from FOV in radians
-        principal_point=torch.tensor((width / 2, height / 2))
-        .repeat(num_poses)
-        .reshape(-1, 2),  # different order from image_size!!
+        focal_length=torch.ones(num_poses, 1)* 0.5* width/ np.tan(fov / 2),  # Calculate focal length from FOV in radians
+        principal_point=torch.tensor((width / 2, height / 2)).repeat(num_poses).reshape(-1, 2),  # different order from image_size!!
         image_size=torch.tensor((height, width)).repeat(num_poses).reshape(-1, 2),
         in_ndc=False,
     )
@@ -225,8 +220,20 @@ def render_image(mesh, camera_poses, width=640, height=480, fov=1, device="cpu")
     return color, depth
 
 
+def calc_intrinsics(
+    width=640,
+    height=480,
+    fov=1,        
+):
+    # Calculate intrinsics
+    fx = 0.5 * width / np.tan(fov / 2)
+    fy = fx  # * aspect_ratio
+    cx, cy = width / 2, height / 2
+    camera_intrinsics = np.array([[fx, 0, cx], [0, fy, cy], [0, 0, 1]])
+    return camera_intrinsics
+
 def render_multi_images(
-    mesh,
+    mesh_path,
     width=640,
     height=480,
     fov=1,
@@ -238,22 +245,16 @@ def render_multi_images(
     # Sample camera poses
     camera_poses = sample_camera_poses(radius, num_samples, num_ups, device)
 
-    # Calculate intrinsics
-    fx = 0.5 * width / np.tan(fov / 2)
-    fy = fx  # * aspect_ratio
-    cx, cy = width / 2, height / 2
-    camera_intrinsics = np.array([[fx, 0, cx], [0, fy, cy], [0, 0, 1]])
-
     num_cameras = camera_poses.shape[0]
 
     # Render two times to avoid memory overflow
     split = num_cameras // 2
     color1, depth1 = render_image(
-        mesh, camera_poses[:split], width, height, fov, device
+        mesh_path, camera_poses[:split], width, height, fov, device
     )
     color2, depth2 = render_image(
-        mesh, camera_poses[split:], width, height, fov, device
+        mesh_path, camera_poses[split:], width, height, fov, device
     )
     color = np.concatenate([color1, color2], axis=0)
     depth = np.concatenate([depth1, depth2], axis=0)
-    return color, depth, camera_poses, camera_intrinsics
+    return color, depth, camera_poses

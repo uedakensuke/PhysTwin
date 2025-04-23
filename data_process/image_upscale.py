@@ -9,10 +9,12 @@ import cv2
 import numpy as np
 
 from .utils.path import PathResolver
+from .utils.data import ImageReader
 
 class ImageUpscaleProcessor:
     def __init__(self, raw_path:str, base_path:str , case_name:str, *, controller_name="hand", model_id = "stabilityai/stable-diffusion-x4-upscaler"):
         self.path = PathResolver(raw_path, base_path, case_name, controller_name=controller_name)
+        self.data = ImageReader(self.path)
 
         # load model and scheduler
         self.pipeline = StableDiffusionUpscalePipeline.from_pretrained(
@@ -26,23 +28,7 @@ class ImageUpscaleProcessor:
             return False # already exists
 
         low_res_img = Image.open(self.path.get_color_frame_path(camera_idx,0)).convert("RGB")
-        mask = cv2.imread(self.path.get_object_mask_frame_path(camera_idx,0), cv2.IMREAD_GRAYSCALE)
-        mask_binary = np.argwhere(mask > 0.8 * 255)
-        bbox = (
-            np.min(mask_binary[:, 1]),
-            np.min(mask_binary[:, 0]),
-            np.max(mask_binary[:, 1]),
-            np.max(mask_binary[:, 0])
-        )
-        center = (bbox[0] + bbox[2]) / 2, (bbox[1] + bbox[3]) / 2
-        size = max(bbox[2] - bbox[0], bbox[3] - bbox[1])
-        size_margin = int(size * 1.2)
-        bbox_margin = (
-            center[0] - size_margin // 2,
-            center[1] - size_margin // 2,
-            center[0] + size_margin // 2,
-            center[1] + size_margin // 2
-        )
+        bbox_margin, mask_img = self.data.read_object_bbox_and_mask(camera_idx,0)
 
         upscaled_image = self.pipeline(
             prompt=f"Hand manipulates a {category}.",

@@ -8,13 +8,13 @@ import numpy as np
 
 from .utils.visualizer import Visualizer
 from .utils.path import PathResolver
-from .utils.data import DataReader
+from .utils.data import ImageReader
 
 
 class VideoTrackProcessor:
     def __init__(self, raw_path:str, base_path:str, case_name:str):
         self.path = PathResolver(raw_path,base_path,case_name)
-        self.data = DataReader(self.path)
+        self.data = ImageReader(self.path)
         self.num_cam = self.path.find_num_cam()
 
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
