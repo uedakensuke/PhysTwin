@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 
-from .path import PathResolver()
+from .path import PathResolver
 
 class DataReader:
     def __init__(self, path_resolver:PathResolver):
