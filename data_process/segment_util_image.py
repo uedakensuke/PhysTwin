@@ -19,7 +19,7 @@ Hyper parameters
 BOX_THRESHOLD = 0.35
 TEXT_THRESHOLD = 0.25
 
-class SegmentImageProcessor:
+class ImageSegmentProcessor:
     def __init__(self, raw_path:str, base_path:str , case_name:str):
         self.path = PathResolver(raw_path, base_path, case_name)
 
@@ -104,5 +104,5 @@ if __name__ == "__main__":
     parser.add_argument("--text_prompt", type=str, required=True)
     args = parser.parse_args()
 
-    sp = SegmentImageProcessor(args.raw_path, args.base_path, args.case_name, args.case_name)
-    sp.process(args.text_prompt)
+    isp = ImageSegmentProcessor(args.raw_path, args.base_path, args.case_name, args.case_name)
+    isp.process(args.text_prompt)

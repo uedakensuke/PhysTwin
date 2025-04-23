@@ -9,14 +9,20 @@ class PathResolver:
         self.case_name = case_name
         self.controller_name = controller_name
 
+        #### raw_path配下
         self.raw_color_dir=f"{self.raw_path}/{self.case_name}/color"
         self.raw_depth_dir=f"{self.raw_path}/{self.case_name}/depth"
         self.raw_camera_meta=f"{self.raw_path}/{self.case_name}/metadata.json"
         self.raw_camera_calibrate=f"{self.raw_path}/{self.case_name}/calibrate.pkl"
 
-        self.base_mask_dir=f"{self.base_path}/{self.case_name}/mask"
-        self.processed_masks=f"{self.base_mask_dir}/processed_masks.pkl"
+        #### base_path配下
+        self.tarck_process_data = f"{self.base_path}/{self.case_name}/track_process_data.pkl"
 
+        #### base_path配下(mask)
+        self.base_mask_dir = f"{self.base_path}/{self.case_name}/mask"
+        self.processed_masks = f"{self.base_mask_dir}/processed_masks.pkl"
+
+        #### base_path配下(shape)
         self.base_shape_dir = f"{self.base_path}/{self.case_name}/shape"
         self.upscale_image = f"{self.base_shape_dir}/high_resolution.png"
         self.masked_upscale_image = f"{self.base_shape_dir}/masked_image.png"
@@ -24,8 +30,10 @@ class PathResolver:
         self.reconstruct_3d_model_ply = f"{self.base_shape_dir}/object.ply"
         self.reconstruct_3d_model_video = f"{self.base_shape_dir}/visualization.mp4"
 
+        #### base_path配下(cotracker)
         self.base_cotracker_dir = f"{self.base_path}/{self.case_name}/cotracker"
 
+        #### base_path配下(pcd)
         self.base_pcd_dir = f"{self.base_path}/{self.case_name}/pcd"
 
     def find_num_cam(self):
@@ -84,3 +92,4 @@ class PathResolver:
 
     def get_pcd_data_path(self, frame_idx:int):
         return f"{self.base_pcd_dir}/{frame_idx}.npz"
+    

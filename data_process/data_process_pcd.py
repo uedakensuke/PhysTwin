@@ -116,7 +116,7 @@ def exist_dir(dir):
         os.makedirs(dir)
 
 
-class PcdProcessor:
+class PcdEstimateProcessor:
     def __init__(self, raw_path:str, base_path:str, case_name:str, num_cam = 3):
         self.path = PathResolver(raw_path,base_path,case_name)
         self.num_cam = num_cam
@@ -254,5 +254,5 @@ if __name__ == "__main__":
     parser.add_argument("--case_name", type=str, required=True)
     args = parser.parse_args()
 
-    pp = PcdProcessor(args.raw_path, args.base_path, args.case_name)
-    pp.process()
+    pep = PcdEstimateProcessor(args.raw_path, args.base_path, args.case_name)
+    pep.process()

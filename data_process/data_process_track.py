@@ -1,26 +1,16 @@
 # FIlter the tracking based on the object and controller mask, filter the track based on the neighbour motion
 # Get the nearest controller points that are valid across all frames
+import os
+import glob
+import pickle
+from argparse import ArgumentParser
 
 import numpy as np
 import open3d as o3d
 from tqdm import tqdm
-import os
-import glob
-import pickle
 import matplotlib.pyplot as plt
-from argparse import ArgumentParser
 
-parser = ArgumentParser()
-parser.add_argument(
-    "--base_path",
-    type=str,
-    required=True,
-)
-parser.add_argument("--case_name", type=str, required=True)
-args = parser.parse_args()
-
-base_path = args.base_path
-case_name = args.case_name
+from .utils.path import PathResolver
 
 
 def exist_dir(dir):
@@ -34,108 +24,7 @@ def getSphereMesh(center, radius=0.1, color=[0, 0, 0]):
     return sphere
 
 
-# Based on the valid mask, filter out the bad tracking data
-def filter_track(track_path, pcd_path, mask_path, frame_num, num_cam):
-    with open(f"{mask_path}/processed_masks.pkl", "rb") as f:
-        processed_masks = pickle.load(f)
-
-    # Filter out the points not valid in the first frame
-    object_points = []
-    object_colors = []
-    object_visibilities = []
-    controller_points = []
-    controller_colors = []
-    controller_visibilities = []
-    for i in range(num_cam):
-        current_track_data = np.load(f"{track_path}/{i}.npz")
-        # Filter out the track data
-        tracks = current_track_data["tracks"]
-        tracks = np.round(tracks).astype(int)
-        visibility = current_track_data["visibility"]
-        assert tracks.shape[0] == frame_num
-        num_points = np.shape(tracks)[1]
-
-        # Locate the track points in the object mask of the first frame
-        object_mask = processed_masks[0][i]["object"]
-        track_object_idx = np.zeros((num_points), dtype=int)
-        for j in range(num_points):
-            if visibility[0, j] == 1:
-                track_object_idx[j] = object_mask[tracks[0, j, 0], tracks[0, j, 1]]
-        # Locate the controller points in the controller mask of the first frame
-        controller_mask = processed_masks[0][i]["controller"]
-        track_controller_idx = np.zeros((num_points), dtype=int)
-        for j in range(num_points):
-            if visibility[0, j] == 1:
-                track_controller_idx[j] = controller_mask[
-                    tracks[0, j, 0], tracks[0, j, 1]
-                ]
-
-        # Filter out bad tracking in other frames
-        for frame_idx in range(1, frame_num):
-            # Filter based on object_mask
-            object_mask = processed_masks[frame_idx][i]["object"]
-            for j in range(num_points):
-                try:
-                    if track_object_idx[j] == 1 and visibility[frame_idx, j] == 1:
-                        if not object_mask[
-                            tracks[frame_idx, j, 0], tracks[frame_idx, j, 1]
-                        ]:
-                            visibility[frame_idx, j] = 0
-                except:
-                    # Sometimes the track coordinate is out of image
-                    visibility[frame_idx, j] = 0
-            # Filter based on controller_mask
-            controller_mask = processed_masks[frame_idx][i]["controller"]
-            for j in range(num_points):
-                if track_controller_idx[j] == 1 and visibility[frame_idx, j] == 1:
-                    if not controller_mask[
-                        tracks[frame_idx, j, 0], tracks[frame_idx, j, 1]
-                    ]:
-                        visibility[frame_idx, j] = 0
-
-        # Get the track point cloud
-        track_points = np.zeros((frame_num, num_points, 3))
-        track_colors = np.zeros((frame_num, num_points, 3))
-        for frame_idx in range(frame_num):
-            data = np.load(f"{pcd_path}/{frame_idx}.npz")
-            points = data["points"]
-            colors = data["colors"]
-
-            track_points[frame_idx][np.where(visibility[frame_idx])] = points[i][
-                tracks[frame_idx, np.where(visibility[frame_idx])[0], 0],
-                tracks[frame_idx, np.where(visibility[frame_idx])[0], 1],
-            ]
-            track_colors[frame_idx][np.where(visibility[frame_idx])] = colors[i][
-                tracks[frame_idx, np.where(visibility[frame_idx])[0], 0],
-                tracks[frame_idx, np.where(visibility[frame_idx])[0], 1],
-            ]
-
-        object_points.append(track_points[:, np.where(track_object_idx)[0], :])
-        object_colors.append(track_colors[:, np.where(track_object_idx)[0], :])
-        object_visibilities.append(visibility[:, np.where(track_object_idx)[0]])
-        controller_points.append(track_points[:, np.where(track_controller_idx)[0], :])
-        controller_colors.append(track_colors[:, np.where(track_controller_idx)[0], :])
-        controller_visibilities.append(visibility[:, np.where(track_controller_idx)[0]])
-
-    object_points = np.concatenate(object_points, axis=1)
-    object_colors = np.concatenate(object_colors, axis=1)
-    object_visibilities = np.concatenate(object_visibilities, axis=1)
-    controller_points = np.concatenate(controller_points, axis=1)
-    controller_colors = np.concatenate(controller_colors, axis=1)
-    controller_visibilities = np.concatenate(controller_visibilities, axis=1)
-
-    track_data = {}
-    track_data["object_points"] = object_points
-    track_data["object_colors"] = object_colors
-    track_data["object_visibilities"] = object_visibilities
-    track_data["controller_points"] = controller_points
-    track_data["controller_colors"] = controller_colors
-    track_data["controller_visibilities"] = controller_visibilities
-
-    return track_data
-
-
-def filter_motion(track_data, neighbor_dist=0.01):
+def filter_motion(track_data, neighbor_dist=0.01, *, show_window=False):
     # Calculate the motion of each point
     object_points = track_data["object_points"]
     object_colors = track_data["object_colors"]
@@ -154,8 +43,10 @@ def filter_motion(track_data, neighbor_dist=0.01):
     num_frames = object_points.shape[0]
     num_points = object_points.shape[1]
 
-    vis = o3d.visualization.Visualizer()
-    vis.create_window()
+    if show_window:
+        vis = o3d.visualization.Visualizer()
+        vis.create_window()
+
     for i in tqdm(range(num_frames - 1)):
         # Convert the points of the current frame to an Open3D point cloud
         pcd = o3d.geometry.PointCloud()
@@ -197,49 +88,27 @@ def filter_motion(track_data, neighbor_dist=0.01):
             rainbow_colors[np.where(object_motions_valid[i])]
         )
 
-        # modified_pcd = o3d.geometry.PointCloud()
-        # modified_pcd.points = o3d.utility.Vector3dVector(modified_points)
-        # modified_pcd.colors = o3d.utility.Vector3dVector(
-        #     np.array([1, 0, 0]) * np.ones((len(modified_points), 3))
-        # )
-
-        # new_pcd = o3d.geometry.PointCloud()
-        # new_pcd.points = o3d.utility.Vector3dVector(new_points)
-        # new_pcd.colors = o3d.utility.Vector3dVector(
-        #     np.array([0, 1, 0]) * np.ones((len(new_points), 3))
-        # )
-        if i == 0:
-            render_motion_pcd = motion_pcd
-            # render_modified_pcd = modified_pcd
-            # render_new_pcd = new_pcd
-            vis.add_geometry(render_motion_pcd)
-            # vis.add_geometry(render_modified_pcd)
-            # vis.add_geometry(render_new_pcd)
-            # Adjust the viewpoint
-            view_control = vis.get_view_control()
-            view_control.set_front([1, 0, -2])
-            view_control.set_up([0, 0, -1])
-            view_control.set_zoom(1)
-        else:
-            render_motion_pcd.points = o3d.utility.Vector3dVector(motion_pcd.points)
-            render_motion_pcd.colors = o3d.utility.Vector3dVector(motion_pcd.colors)
-            # render_modified_pcd.points = o3d.utility.Vector3dVector(modified_points)
-            # render_modified_pcd.colors = o3d.utility.Vector3dVector(
-            #     np.array([1, 0, 0]) * np.ones((len(modified_points), 3))
-            # )
-            # render_new_pcd.points = o3d.utility.Vector3dVector(new_points)
-            # render_new_pcd.colors = o3d.utility.Vector3dVector(
-            #     np.array([0, 1, 0]) * np.ones((len(new_points), 3))
-            # )
-            vis.update_geometry(render_motion_pcd)
-            # vis.update_geometry(render_modified_pcd)
-            # vis.update_geometry(render_new_pcd)
-            vis.poll_events()
-            vis.update_renderer()
+        if show_window:
+            if i == 0:
+                render_motion_pcd = motion_pcd
+                vis.add_geometry(render_motion_pcd)
+                # Adjust the viewpoint
+                view_control = vis.get_view_control()
+                view_control.set_front([1, 0, -2])
+                view_control.set_up([0, 0, -1])
+                view_control.set_zoom(1)
+            else:
+                render_motion_pcd.points = o3d.utility.Vector3dVector(motion_pcd.points)
+                render_motion_pcd.colors = o3d.utility.Vector3dVector(motion_pcd.colors)
+                vis.update_geometry(render_motion_pcd)
+                vis.poll_events()
+                vis.update_renderer()
         # modified_num = len(modified_points)
         # print(f"Object Frame {i}: {modified_num} points are modified")
 
-    vis.destroy_window()
+    if show_window:
+        vis.destroy_window()
+
     track_data["object_motions_valid"] = object_motions_valid
 
     controller_points = track_data["controller_points"]
@@ -261,8 +130,9 @@ def filter_motion(track_data, neighbor_dist=0.01):
     y_normalized = (controller_points[0, :, 1] - y_min) / (y_max - y_min)
     rainbow_colors = plt.cm.rainbow(y_normalized)[:, :3]
 
-    vis = o3d.visualization.Visualizer()
-    vis.create_window()
+    if show_window:
+        vis = o3d.visualization.Visualizer()
+        vis.create_window()
 
     for i in tqdm(range(num_frames - 1)):
         # Convert the points of the current frame to an Open3D point cloud
@@ -303,30 +173,27 @@ def filter_motion(track_data, neighbor_dist=0.01):
             controller_colors[i][np.where(controller_motions_valid[i])]
         )
 
-        if i == 0:
-            render_motion_pcd = motion_pcd
-            vis.add_geometry(render_motion_pcd)
-            # Adjust the viewpoint
-            view_control = vis.get_view_control()
-            view_control.set_front([1, 0, -2])
-            view_control.set_up([0, 0, -1])
-            view_control.set_zoom(1)
-        else:
-            render_motion_pcd.points = o3d.utility.Vector3dVector(motion_pcd.points)
-            render_motion_pcd.colors = o3d.utility.Vector3dVector(motion_pcd.colors)
-            vis.update_geometry(render_motion_pcd)
-            vis.poll_events()
-            vis.update_renderer()
+        if show_window:
+            if i == 0:
+                render_motion_pcd = motion_pcd
+                vis.add_geometry(render_motion_pcd)
+                # Adjust the viewpoint
+                view_control = vis.get_view_control()
+                view_control.set_front([1, 0, -2])
+                view_control.set_up([0, 0, -1])
+                view_control.set_zoom(1)
+            else:
+                render_motion_pcd.points = o3d.utility.Vector3dVector(motion_pcd.points)
+                render_motion_pcd.colors = o3d.utility.Vector3dVector(motion_pcd.colors)
+                vis.update_geometry(render_motion_pcd)
+                vis.poll_events()
+                vis.update_renderer()
 
     track_data["controller_mask"] = mask
     return track_data
 
 
-def get_final_track_data(track_data, controller_threhsold=0.01):
-    object_points = track_data["object_points"]
-    object_colors = track_data["object_colors"]
-    object_visibilities = track_data["object_visibilities"]
-    object_motions_valid = track_data["object_motions_valid"]
+def get_final_track_data(track_data):
     controller_points = track_data["controller_points"]
     mask = track_data["controller_mask"]
 
@@ -377,8 +244,6 @@ def get_final_track_data(track_data, controller_threhsold=0.01):
 
 def visualize_track(track_data):
     object_points = track_data["object_points"]
-    object_colors = track_data["object_colors"]
-    object_visibilities = track_data["object_visibilities"]
     object_motions_valid = track_data["object_motions_valid"]
     controller_points = track_data["controller_points"]
 
@@ -434,29 +299,136 @@ def visualize_track(track_data):
             vis.poll_events()
             vis.update_renderer()
 
+class PcdTrackProcessor:
+
+    def __init__(self, raw_path:str, base_path:str, case_name:str, *, show_window=False):
+        self.path = PathResolver(raw_path,base_path,case_name)
+        self.show_window = show_window
+
+    def process(self): 
+        # Filter the track data using the semantic mask of object and controller
+        filtered_track_data =self._filter_track()
+        # Filter motion
+        filtered_motion_track_data = filter_motion(filtered_track_data,show_window=self.show_window)
+
+        final_track_data = get_final_track_data(filtered_motion_track_data)
+
+        with open(self.path.tarck_process_data, "wb") as f:
+            pickle.dump(final_track_data, f)
+
+        if self.show_window:
+            visualize_track(final_track_data)
+
+    # Based on the valid mask, filter out the bad tracking data
+    def _filter_track(self):
+        frame_num = self.path.find_num_frame()
+
+        with open(self.path.processed_masks, "rb") as f:
+            processed_masks = pickle.load(f)
+
+        # Filter out the points not valid in the first frame
+        object_points = []
+        object_colors = []
+        object_visibilities = []
+        controller_points = []
+        controller_colors = []
+        controller_visibilities = []
+        for i in range(self.path.find_num_cam()):
+            current_track_data = np.load(self.path.get_tracking_data_path(i))
+            # Filter out the track data
+            tracks = current_track_data["tracks"]
+            tracks = np.round(tracks).astype(int)
+            visibility = current_track_data["visibility"]
+            assert tracks.shape[0] == frame_num
+            num_points = np.shape(tracks)[1]
+
+            # Locate the track points in the object mask of the first frame
+            object_mask = processed_masks[0][i]["object"]
+            track_object_idx = np.zeros((num_points), dtype=int)
+            for j in range(num_points):
+                if visibility[0, j] == 1:
+                    track_object_idx[j] = object_mask[tracks[0, j, 0], tracks[0, j, 1]]
+            # Locate the controller points in the controller mask of the first frame
+            controller_mask = processed_masks[0][i]["controller"]
+            track_controller_idx = np.zeros((num_points), dtype=int)
+            for j in range(num_points):
+                if visibility[0, j] == 1:
+                    track_controller_idx[j] = controller_mask[
+                        tracks[0, j, 0], tracks[0, j, 1]
+                    ]
+
+            # Filter out bad tracking in other frames
+            for frame_idx in range(1, frame_num):
+                # Filter based on object_mask
+                object_mask = processed_masks[frame_idx][i]["object"]
+                for j in range(num_points):
+                    try:
+                        if track_object_idx[j] == 1 and visibility[frame_idx, j] == 1:
+                            if not object_mask[
+                                tracks[frame_idx, j, 0], tracks[frame_idx, j, 1]
+                            ]:
+                                visibility[frame_idx, j] = 0
+                    except:
+                        # Sometimes the track coordinate is out of image
+                        visibility[frame_idx, j] = 0
+                # Filter based on controller_mask
+                controller_mask = processed_masks[frame_idx][i]["controller"]
+                for j in range(num_points):
+                    if track_controller_idx[j] == 1 and visibility[frame_idx, j] == 1:
+                        if not controller_mask[
+                            tracks[frame_idx, j, 0], tracks[frame_idx, j, 1]
+                        ]:
+                            visibility[frame_idx, j] = 0
+
+            # Get the track point cloud
+            track_points = np.zeros((frame_num, num_points, 3))
+            track_colors = np.zeros((frame_num, num_points, 3))
+            for frame_idx in range(frame_num):
+                data = np.load(self.path.get_pcd_data_path(frame_idx))
+                points = data["points"]
+                colors = data["colors"]
+
+                track_points[frame_idx][np.where(visibility[frame_idx])] = points[i][
+                    tracks[frame_idx, np.where(visibility[frame_idx])[0], 0],
+                    tracks[frame_idx, np.where(visibility[frame_idx])[0], 1],
+                ]
+                track_colors[frame_idx][np.where(visibility[frame_idx])] = colors[i][
+                    tracks[frame_idx, np.where(visibility[frame_idx])[0], 0],
+                    tracks[frame_idx, np.where(visibility[frame_idx])[0], 1],
+                ]
+
+            object_points.append(track_points[:, np.where(track_object_idx)[0], :])
+            object_colors.append(track_colors[:, np.where(track_object_idx)[0], :])
+            object_visibilities.append(visibility[:, np.where(track_object_idx)[0]])
+            controller_points.append(track_points[:, np.where(track_controller_idx)[0], :])
+            controller_colors.append(track_colors[:, np.where(track_controller_idx)[0], :])
+            controller_visibilities.append(visibility[:, np.where(track_controller_idx)[0]])
+
+        object_points = np.concatenate(object_points, axis=1)
+        object_colors = np.concatenate(object_colors, axis=1)
+        object_visibilities = np.concatenate(object_visibilities, axis=1)
+        controller_points = np.concatenate(controller_points, axis=1)
+        controller_colors = np.concatenate(controller_colors, axis=1)
+        controller_visibilities = np.concatenate(controller_visibilities, axis=1)
+
+        track_data = {}
+        track_data["object_points"] = object_points
+        track_data["object_colors"] = object_colors
+        track_data["object_visibilities"] = object_visibilities
+        track_data["controller_points"] = controller_points
+        track_data["controller_colors"] = controller_colors
+        track_data["controller_visibilities"] = controller_visibilities
+
+        return track_data
+
 
 if __name__ == "__main__":
-    pcd_path = f"{base_path}/{case_name}/pcd"
-    mask_path = f"{base_path}/{case_name}/mask"
-    track_path = f"{base_path}/{case_name}/cotracker"
+    parser = ArgumentParser()
+    parser.add_argument("--raw_path", type=str, required=True)
+    parser.add_argument("--base_path", type=str, required=True)
+    parser.add_argument("--case_name", type=str, required=True)
+    parser.add_argument("--show_window", action='store_true' )
+    args = parser.parse_args()
 
-    num_cam = len(glob.glob(f"{mask_path}/mask_info_*.json"))
-    frame_num = len(glob.glob(f"{pcd_path}/*.npz"))
-
-    # Filter the track data using the semantic mask of object and controller
-    track_data = filter_track(track_path, pcd_path, mask_path, frame_num, num_cam)
-    # Filter motion
-    track_data = filter_motion(track_data)
-    # # Save the filtered track data
-    # with open(f"test2.pkl", "wb") as f:
-    #     pickle.dump(track_data, f)
-
-    # with open(f"test2.pkl", "rb") as f:
-    #     track_data = pickle.load(f)
-
-    track_data = get_final_track_data(track_data)
-
-    with open(f"{base_path}/{case_name}/track_process_data.pkl", "wb") as f:
-        pickle.dump(track_data, f)
-
-    visualize_track(track_data)
+    ptp = PcdTrackProcessor(args.raw_path, args.base_path, args.case_name, show_window=args.show_window)
+    ptp.process()

@@ -5,13 +5,14 @@ import logging
 import json
 import glob
 
-from data_process.segment_util_video import SegmentVideoProcessor
-from data_process.image_upscale import UpscaleProcessor
-from data_process.segment_util_image import SegmentImageProcessor
-from data_process.shape_prior import ShapeProcessor
-from data_process.dense_track import TrackProcessor
-from data_process.data_process_pcd import PcdProcessor
-from data_process.data_process_mask import MaskProcessor
+from data_process.segment_util_video import VideoSegmentProcessor
+from data_process.image_upscale import ImageUpscaleProcessor
+from data_process.segment_util_image import ImageSegmentProcessor
+from data_process.shape_prior import ShapePriorProcessor
+from data_process.dense_track import VideoTrackProcessor
+from data_process.data_process_pcd import PcdEstimateProcessor
+from data_process.data_process_mask import PcdMaskProcessor
+from data_process.data_process_track import PcdTrackProcessor
 
 CONTROLLER_NAME = "hand"
 
@@ -56,10 +57,12 @@ class Timer:
         )
 
 class DataProcessor:
-    def __init__(self, raw_path:str, base_path:str, case_name:str):
+    def __init__(self, raw_path:str, base_path:str, case_name:str, show_window=False):
         self.raw_path = raw_path
         self.base_path = base_path
         self.case_name = case_name
+        self.show_window = show_window
+        
         self.logger = setup_logger(f"{base_path}/{case_name}/timer.log")
         self.category, self.use_shape_prior = _read_config(raw_path, case_name)
 
@@ -80,46 +83,45 @@ class DataProcessor:
         with Timer(self.logger,"Video Segmentation",self.case_name):
             for camera_idx in range(camera_num):
                 print(f"Processing {self.case_name} camera {camera_idx}")
-                svp = SegmentVideoProcessor(self.raw_path,self.base_path,self.case_name)
-                svp.process(camera_idx, f"{self.category}.{CONTROLLER_NAME}")
+                vsp = VideoSegmentProcessor(self.raw_path,self.base_path,self.case_name)
+                vsp.process(camera_idx, f"{self.category}.{CONTROLLER_NAME}")
 
     def _process_shape_prior(self):
         # Get the high-resolution of the image to prepare for the trellis generation
         with Timer(self.logger,"Image Upscale",self.case_name):
-            up = UpscaleProcessor(self.raw_path, self.base_path, self.case_name, controller_name=CONTROLLER_NAME)
-            up.process(0, self.category) # for camera 0
+            iup = ImageUpscaleProcessor(self.raw_path, self.base_path, self.case_name, controller_name=CONTROLLER_NAME)
+            iup.process(0, self.category) # for camera 0
 
         # Get the masked image of the object
         with Timer(self.logger,"Image Segmentation",self.case_name):
-            sip = SegmentImageProcessor(self.raw_path, self.base_path, self.case_name)
-            sip.process(self.category)
+            isp = ImageSegmentProcessor(self.raw_path, self.base_path, self.case_name)
+            isp.process(self.category)
 
         with Timer(self.logger,"Shape Prior Generation",self.case_name):
-            sp = ShapeProcessor(self.raw_path, self.base_path, self.case_name)
-            sp.process()
+            spp = ShapePriorProcessor(self.raw_path, self.base_path, self.case_name)
+            spp.process()
 
     def _process_track(self):
         # Get the dense tracking of the object using Co-tracker
         with Timer(self.logger,"Dense Tracking",self.case_name):
-            tp = TrackProcessor(self.raw_path, self.base_path, self.case_name)
-            tp.process()
+            vtp = VideoTrackProcessor(self.raw_path, self.base_path, self.case_name)
+            vtp.process()
 
     def _process_3d(self):
         # Get the pcd in the world coordinate from the raw observations
         with Timer(self.logger,"Lift to 3D",self.case_name):
-            pp = PcdProcessor(self.raw_path, self.base_path, self.case_name)
-            pp.process()
+            pep = PcdEstimateProcessor(self.raw_path, self.base_path, self.case_name)
+            pep.process()
 
         # Further process and filter the noise of object and controller masks
         with Timer(self.logger,"Mask Post-Processing",self.case_name):
-            mp = MaskProcessor(self.raw_path, self.base_path, self.case_name, controller_name=CONTROLLER_NAME)
-            mp.process()
+            pmp = PcdMaskProcessor(self.raw_path, self.base_path, self.case_name, controller_name=CONTROLLER_NAME)
+            pmp.process()
 
-        # # Process the data tracking
-        # with Timer(self.logger,"Data Tracking",self.case_name):
-        #     os.system(
-        #         f"python ./data_process/data_process_track.py --base_path {self.base_path} --case_name {self.case_name}"
-        #     )
+        # Process the data tracking
+        with Timer(self.logger,"Data Tracking",self.case_name):
+            ptp = PcdTrackProcessor(self.raw_path, self.base_path, self.case_name, show_window=self.show_window)
+            ptp.process()
 
     def _process_align(self):
         # Align the shape prior with partial observation
@@ -162,7 +164,8 @@ if __name__ == "__main__":
     parser.add_argument("--raw_path", type=str, required=True)
     parser.add_argument("--base_path", type=str, required=True)
     parser.add_argument("--case_name", type=str, required=True)
+    parser.add_argument("--show_window", action='store_true' )
     args = parser.parse_args()
 
-    dp = DataProcessor(args.raw_path, args.base_path, args.case_name)
+    dp = DataProcessor(args.raw_path, args.base_path, args.case_name, show_window=args.show_window)
     dp.process()

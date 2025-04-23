@@ -10,7 +10,7 @@ import numpy as np
 
 from .utils.path import PathResolver
 
-class UpscaleProcessor:
+class ImageUpscaleProcessor:
     def __init__(self, raw_path:str, base_path:str , case_name:str, *, controller_name="hand", model_id = "stabilityai/stable-diffusion-x4-upscaler"):
         self.path = PathResolver(raw_path, base_path, case_name, controller_name=controller_name)
 
@@ -62,5 +62,5 @@ if __name__ == "__main__":
     parser.add_argument("--category", type=str, required=True)
     args = parser.parse_args()
 
-    up=UpscaleProcessor(args.raw_path, args.base_path, args.case_name, controller_name=args.controller_name)
-    up.process(args.camera_idx, args.category)
+    iup=ImageUpscaleProcessor(args.raw_path, args.base_path, args.case_name, controller_name=args.controller_name)
+    iup.process(args.camera_idx, args.category)

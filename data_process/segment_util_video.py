@@ -29,7 +29,7 @@ def existDir(dir_path):
     if not os.path.exists(dir_path):
         os.makedirs(dir_path)
 
-class SegmentVideoProcessor:
+class VideoSegmentProcessor:
 
     def __init__(self, raw_path:str, base_path:str, case_name:str):
         self.path = PathResolver(raw_path, base_path, case_name)
@@ -192,5 +192,5 @@ if __name__ == "__main__":
     parser.add_argument("--camera_idx", type=int, required=True)
     args = parser.parse_args()
 
-    sp = SegmentVideoProcessor(args.raw_path, args.base_path, args.case_name, args.camera_idx, args.TEXT_PROMPT)
-    sp.process()
+    vsp = VideoSegmentProcessor(args.raw_path, args.base_path, args.case_name, args.camera_idx, args.TEXT_PROMPT)
+    vsp.process()

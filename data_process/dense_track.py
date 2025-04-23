@@ -1,11 +1,9 @@
 # Use co-tracker to track the ibject and controller in the video (pick 5000 pixels in the masked area)
 import os
-import glob
 from argparse import ArgumentParser
 
 import torch
 import imageio.v3 as iio
-import cv2
 import numpy as np
 
 from .utils.visualizer import Visualizer
@@ -13,7 +11,7 @@ from .utils.path import PathResolver
 from .utils.data import DataReader
 
 
-class TrackProcessor:
+class VideoTrackProcessor:
     def __init__(self, raw_path:str, base_path:str, case_name:str):
         self.path = PathResolver(raw_path,base_path,case_name)
         self.data = DataReader(self.path)
@@ -79,5 +77,5 @@ if __name__ == "__main__":
     parser.add_argument("--case_name", type=str, required=True)
     args = parser.parse_args()
 
-    tp = TrackProcessor(args.raw_path, args.base_path, args.case_name)
-    tp.process()
+    vtp = VideoTrackProcessor(args.raw_path, args.base_path, args.case_name)
+    vtp.process()

@@ -1,7 +1,6 @@
 # Process the mask data to filter out the outliers and generate the processed masks
 
 import os
-import glob
 import json
 import pickle
 from argparse import ArgumentParser
@@ -27,7 +26,7 @@ def read_mask(mask_path):
     return mask
 
 
-class MaskProcessor:
+class PcdMaskProcessor:
     def __init__(self, raw_path:str, base_path:str, case_name:str, *, controller_name="hand"):
         self.path = PathResolver(raw_path,base_path,case_name, controller_name=controller_name)
         self.data = DataReader(self.path)
@@ -212,5 +211,5 @@ if __name__ == "__main__":
     parser.add_argument("--controller_name", type=str, default="hand")
     args = parser.parse_args()
 
-    mp = MaskProcessor(args.raw_path, args.base_path, args.case_name, controller_name=args.controller_name)
-    mp.process()
+    pmp = PcdMaskProcessor(args.raw_path, args.base_path, args.case_name, controller_name=args.controller_name)
+    pmp.process()

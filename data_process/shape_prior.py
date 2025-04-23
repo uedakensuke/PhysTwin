@@ -14,7 +14,7 @@ import numpy as np
 
 from .utils.path import PathResolver
 
-class ShapeProcessor:
+class ShapePriorProcessor:
     def __init__(self, raw_path:str, base_path:str , case_name:str, *, trellis_model="JeffreyXiang/TRELLIS-image-large"):
         self.path = PathResolver(raw_path, base_path, case_name)
         # Load a pipeline from a model folder or a Hugging Face model hub.
@@ -56,5 +56,5 @@ if __name__ == "__main__":
     parser.add_argument("--case_name", type=str, required=True)
     args = parser.parse_args()
 
-    sp = ShapeProcessor(args.raw_path, args.base_path, args.case_name, args.case_name)
-    sp.process()
+    spp = ShapePriorProcessor(args.raw_path, args.base_path, args.case_name, args.case_name)
+    spp.process()
