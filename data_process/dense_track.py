@@ -21,7 +21,7 @@ class TrackProcessor:
     def __init__(self, raw_path:str, base_path:str, case_name:str, num_cam = 3):
         self.path = PathResolver(raw_path,base_path,case_name)
         self.num_cam = num_cam
-        self.path.assert_num_cum(num_cam)
+        self.path.assert_num_cam(num_cam)
 
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
 
