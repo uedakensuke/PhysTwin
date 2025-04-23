@@ -10,6 +10,7 @@ from data_process.image_upscale import UpscaleProcessor
 from data_process.segment_util_image import SegmentImageProcessor
 from data_process.shape_prior import ShapeProcessor
 from data_process.dense_track import TrackProcessor
+from data_process.data_process_pcd import PcdProcessor
 
 CONTROLLER_NAME = "hand"
 
@@ -105,21 +106,20 @@ class DataProcessor:
     def _process_3d(self):
         # Get the pcd in the world coordinate from the raw observations
         with Timer(self.logger,"Lift to 3D",self.case_name):
-            os.system(
-                f"python ./data_process/data_process_pcd.py --base_path {self.base_path} --case_name {self.case_name}"
-            )
+            pp = PcdProcessor(self.raw_path, self.base_path, self.case_name)
+            pp.process()
 
-        # Further process and filter the noise of object and controller masks
-        with Timer(self.logger,"Mask Post-Processing",self.case_name):
-            os.system(
-                f"python ./data_process/data_process_mask.py --base_path {self.base_path} --case_name {self.case_name} --controller_name {CONTROLLER_NAME}"
-            )
+        # # Further process and filter the noise of object and controller masks
+        # with Timer(self.logger,"Mask Post-Processing",self.case_name):
+        #     os.system(
+        #         f"python ./data_process/data_process_mask.py --base_path {self.base_path} --case_name {self.case_name} --controller_name {CONTROLLER_NAME}"
+        #     )
 
-        # Process the data tracking
-        with Timer(self.logger,"Data Tracking",self.case_name):
-            os.system(
-                f"python ./data_process/data_process_track.py --base_path {self.base_path} --case_name {self.case_name}"
-            )
+        # # Process the data tracking
+        # with Timer(self.logger,"Data Tracking",self.case_name):
+        #     os.system(
+        #         f"python ./data_process/data_process_track.py --base_path {self.base_path} --case_name {self.case_name}"
+        #     )
 
     def _process_align(self):
         # Align the shape prior with partial observation

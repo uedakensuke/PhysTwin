@@ -64,8 +64,8 @@ class PathResolver:
     def get_temp_video_frame_dir(self, camera_idx:int):
         return f"{self.base_path}/{self.case_name}/tmp_data_{camera_idx}"
 
-    def list_first_frame_mask_of_all_objects(self, camera_id:int):
-        return glob.glob(f"{self.base_mask_dir}/{camera_id}/*/0.png")
+    def list_first_frame_mask_of_all_objects(self, camera_idx:int):
+        return glob.glob(f"{self.base_mask_dir}/{camera_idx}/*/0.png")
 
     def get_tracking_data_path(self, camera_idx:int):
         return f"{self.base_cotracker_dir}/{camera_idx}.npz"

@@ -27,16 +27,26 @@ class UpscaleProcessor:
 
         low_res_img = Image.open(self.path.get_color_frame_path(camera_idx,0)).convert("RGB")
         mask = cv2.imread(self.path.get_object_mask_frame_path(camera_idx,0), cv2.IMREAD_GRAYSCALE)
-        bbox = np.argwhere(mask > 0.8 * 255)
-        bbox = np.min(bbox[:, 1]), np.min(bbox[:, 0]), np.max(bbox[:, 1]), np.max(bbox[:, 0])
+        mask_binary = np.argwhere(mask > 0.8 * 255)
+        bbox = (
+            np.min(mask_binary[:, 1]),
+            np.min(mask_binary[:, 0]),
+            np.max(mask_binary[:, 1]),
+            np.max(mask_binary[:, 0])
+        )
         center = (bbox[0] + bbox[2]) / 2, (bbox[1] + bbox[3]) / 2
         size = max(bbox[2] - bbox[0], bbox[3] - bbox[1])
-        size = int(size * 1.2)
-        bbox = center[0] - size // 2, center[1] - size // 2, center[0] + size // 2, center[1] + size // 2
+        size_margin = int(size * 1.2)
+        bbox_margin = (
+            center[0] - size_margin // 2,
+            center[1] - size_margin // 2,
+            center[0] + size_margin // 2,
+            center[1] + size_margin // 2
+        )
 
         upscaled_image = self.pipeline(
             prompt=f"Hand manipulates a {category}.",
-            image=low_res_img.crop(bbox)  # type: ignore
+            image=low_res_img.crop(bbox_margin)  # type: ignore
         ).images[0]
 
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
