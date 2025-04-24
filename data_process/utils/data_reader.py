@@ -6,6 +6,13 @@ import numpy as np
 
 from .path import PathResolver
 
+def read_config(path:PathResolver):
+    with open(path.data_config, newline="", encoding="utf-8") as f:
+        line = f.readline()
+    category = line.split(",")[0]
+    use_shape_prior = line.split(",")[1]
+    return category, use_shape_prior
+
 class ImageReader:
     def __init__(self, path_resolver:PathResolver):
         self.path = path_resolver
@@ -106,3 +113,4 @@ class CameraInfo:
     
     def convert_to_camera_coord(self, points_world_coord, camera_idx):
         return trans_points(self.w2cs[camera_idx],points_world_coord)
+

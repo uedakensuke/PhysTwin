@@ -12,10 +12,13 @@ class PathResolver:
         #### raw_path配下
         self._raw_color_dir=f"{self.raw_path}/{self.case_name}/color"
         self._raw_depth_dir=f"{self.raw_path}/{self.case_name}/depth"
+        self.data_config=f"{self.raw_path}/{self.case_name}/data_config.csv"
+        self._raw_split_json=f"{self.raw_path}/{self.case_name}/split.json"
 
         ### 互換性
         self._base_color_dir=f"{self.base_path}/{self.case_name}/color"
         self._base_depth_dir=f"{self.base_path}/{self.case_name}/depth"
+        self._base_split_json=f"{self.raw_path}/{self.case_name}/split.json"
 
         #### base_path配下
         self.tarck_process_data_pkl = f"{self.base_path}/{self.case_name}/track_process_data.pkl"
@@ -130,7 +133,15 @@ class PathResolver:
             return at_base
         else:
             raise Exception("calibrate.pkl not found")
-    
+
+    def get_split_json_path(self):
+        if os.path.exists(self._raw_split_json):
+            return self._raw_split_json
+        elif os.path.exists(self._base_split_json):
+            return self._base_split_json
+        else:
+            raise Exception("color dir not found")
+
     def get_color_dir(self):
         if os.path.exists(self._raw_color_dir):
             return self._raw_color_dir

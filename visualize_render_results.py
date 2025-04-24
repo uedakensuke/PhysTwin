@@ -1,7 +1,10 @@
 import json
+from argparse import ArgumentParser
+
 import numpy as np
 import cv2
-from argparse import ArgumentParser
+
+from data_process.utils.path import PathResolver
 
 height, width = 480, 848
 FPS = 30
@@ -9,6 +12,7 @@ alpha = 0.7
 
 if __name__ == "__main__":
     parser = ArgumentParser()
+    parser.add_argument("--raw_path", type=str, default=None)
     parser.add_argument("--base_path", type=str, required=True)
     parser.add_argument("--human_mask_path", type=str, required=True)
     parser.add_argument("--inference_path", type=str, required=True)
@@ -16,16 +20,21 @@ if __name__ == "__main__":
     parser.add_argument("--case_name", type=str, required=True)
     args = parser.parse_args()
 
-    base_path = args.base_path
+    if args.raw_path is None:
+        args.raw_path = args.base_path
+
     human_mask_path = args.human_mask_path
     inference_path = args.inference_path
     eval_path = args.eval_path
     case_name = args.case_name
 
+    # Set the intrinsic and extrinsic parameters for visualization
+    path_resolver = PathResolver(args.raw_path, args.base_path, args.case_name)
+
     dynamic_scene_dir=f"{inference_path}/{case_name}/dynamic" #gaussian_output_dynamicから変更
     object_mask_dir = f"{eval_path}/{case_name}/render_eval_data"
 
-    with open(f"{base_path}/{case_name}/split.json", "r") as f:
+    with open(path_resolver.get_split_json_path(), "r") as f:
         split = json.load(f)
     frame_len = split["frame_len"]
 
@@ -42,7 +51,7 @@ if __name__ == "__main__":
 
         for frame_idx in range(frame_len):
             render_path = f"{dynamic_scene_dir}/{i}/{frame_idx:05d}.png"
-            origin_image_path = f"{base_path}/{case_name}/color/{i}/{frame_idx}.png"
+            origin_image_path = path_resolver.get_color_frame_path(i,frame_idx)
             human_mask_image_path = (
                 f"{human_mask_path}/{case_name}/mask/{i}/0/{frame_idx}.png"
             )
