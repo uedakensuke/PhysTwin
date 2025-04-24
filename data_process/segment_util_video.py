@@ -33,31 +33,36 @@ class VideoSegmentProcessor:
 
     def __init__(self, raw_path:str, base_path:str, case_name:str):
         self.path = PathResolver(raw_path, base_path, case_name)
-
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.ann_frame_idx = 0  # the frame index we interact with
 
-        # build grounding dino model from local path
-        self.grounding_model = load_model(
-            model_config_path= f"{DIR}/groundedSAM_checkpoints/GroundingDINO_SwinT_OGC.py",
-            model_checkpoint_path=f"{DIR}/groundedSAM_checkpoints/groundingdino_swint_ogc.pth",
-            device=self.device,
-        )
+        self.grounding_model = None
+        self.video_predictor = None
 
-        # init sam image predictor and video predictor model
-        sam2_checkpoint = f"{DIR}//groundedSAM_checkpoints/sam2.1_hiera_large.pt"
-        model_cfg = "configs/sam2.1/sam2.1_hiera_l.yaml"
+    def _init_model(self):
+        if self.grounding_model is None or self.video_predictor is None:
+            device = "cuda" if torch.cuda.is_available() else "cpu"
 
-        self.video_predictor = build_sam2_video_predictor(model_cfg, sam2_checkpoint)
+            # build grounding dino model from local path
+            self.grounding_model = load_model(
+                model_config_path= f"{DIR}/groundedSAM_checkpoints/GroundingDINO_SwinT_OGC.py",
+                model_checkpoint_path=f"{DIR}/groundedSAM_checkpoints/groundingdino_swint_ogc.pth",
+                device=device,
+            )
 
-        # FIXME: figure how does this influence the G-DINO model
-        # comment out. it causes error
-        # torch.autocast(device_type="cuda", dtype=torch.bfloat16).__enter__()
+            # init sam image predictor and video predictor model
+            sam2_checkpoint = f"{DIR}//groundedSAM_checkpoints/sam2.1_hiera_large.pt"
+            model_cfg = "configs/sam2.1/sam2.1_hiera_l.yaml"
 
-        if torch.cuda.get_device_properties(0).major >= 8:
-            # turn on tfloat32 for Ampere GPUs (https://pytorch.org/docs/stable/notes/cuda.html#tensorfloat-32-tf32-on-ampere-devices)
-            torch.backends.cuda.matmul.allow_tf32 = True
-            torch.backends.cudnn.allow_tf32 = True
+            self.video_predictor = build_sam2_video_predictor(model_cfg, sam2_checkpoint)
+
+            # FIXME: figure how does this influence the G-DINO model
+            # comment out. it causes error
+            # torch.autocast(device_type="cuda", dtype=torch.bfloat16).__enter__()
+
+            if torch.cuda.get_device_properties(0).major >= 8:
+                # turn on tfloat32 for Ampere GPUs (https://pytorch.org/docs/stable/notes/cuda.html#tensorfloat-32-tf32-on-ampere-devices)
+                torch.backends.cuda.matmul.allow_tf32 = True
+                torch.backends.cudnn.allow_tf32 = True
 
     def output_exists(self,camera_idx:int,):
         if not os.path.exists(self.path.get_mask_info_path(camera_idx)):
@@ -70,6 +75,9 @@ class VideoSegmentProcessor:
         if self.output_exists(camera_idx):
             print("SKIP: output already exists")
             return False
+
+        if self.grounding_model is None or self.video_predictor is None:
+            self._init_model()
 
         temp_video_frame_dir = self.path.get_temp_video_frame_dir(camera_idx)
 

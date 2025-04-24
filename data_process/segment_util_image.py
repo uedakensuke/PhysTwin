@@ -23,38 +23,56 @@ class ImageSegmentProcessor:
     def __init__(self, raw_path:str, base_path:str , case_name:str):
         self.path = PathResolver(raw_path, base_path, case_name)
 
-        device = "cuda" if torch.cuda.is_available() else "cpu"
-        
-        # build SAM2 image predictor
-        sam2_checkpoint = f"{DIR}/groundedSAM_checkpoints/sam2.1_hiera_large.pt"
-        model_cfg = "configs/sam2.1/sam2.1_hiera_l.yaml"
+        self.grounding_model = None
+        self.image_predictor = None
 
-        sam2_model = build_sam2(model_cfg, sam2_checkpoint, device=device)
-        self.sam2_predictor = SAM2ImagePredictor(sam2_model)
 
-        # build grounding dino model
-        self.grounding_model = load_model(
-            model_config_path=f"{DIR}/groundedSAM_checkpoints/GroundingDINO_SwinT_OGC.py",
-            model_checkpoint_path=f"{DIR}/groundedSAM_checkpoints/groundingdino_swint_ogc.pth",
-            device=device,
-        )
+    def _init_model(self):
+        if self.grounding_model is None or self.image_predictor is None:
+            device = "cuda" if torch.cuda.is_available() else "cpu"
+            
+            # build SAM2 image predictor
+            sam2_checkpoint = f"{DIR}/groundedSAM_checkpoints/sam2.1_hiera_large.pt"
+            model_cfg = "configs/sam2.1/sam2.1_hiera_l.yaml"
 
-        # FIXME: figure how does this influence the G-DINO model
-        # comment out. it causes error
-        # torch.autocast(device_type="cuda", dtype=torch.bfloat16).__enter__()
+            sam2_model = build_sam2(model_cfg, sam2_checkpoint, device=device)
+            self.image_predictor = SAM2ImagePredictor(sam2_model)
 
-        if torch.cuda.get_device_properties(0).major >= 8:
-            # turn on tfloat32 for Ampere GPUs (https://pytorch.org/docs/stable/notes/cuda.html#tensorfloat-32-tf32-on-ampere-devices)
-            torch.backends.cuda.matmul.allow_tf32 = True
-            torch.backends.cudnn.allow_tf32 = True
+            # build grounding dino model
+            self.grounding_model = load_model(
+                model_config_path=f"{DIR}/groundedSAM_checkpoints/GroundingDINO_SwinT_OGC.py",
+                model_checkpoint_path=f"{DIR}/groundedSAM_checkpoints/groundingdino_swint_ogc.pth",
+                device=device,
+            )
+
+            # FIXME: figure how does this influence the G-DINO model
+            # comment out. it causes error
+            # torch.autocast(device_type="cuda", dtype=torch.bfloat16).__enter__()
+
+            if torch.cuda.get_device_properties(0).major >= 8:
+                # turn on tfloat32 for Ampere GPUs (https://pytorch.org/docs/stable/notes/cuda.html#tensorfloat-32-tf32-on-ampere-devices)
+                torch.backends.cuda.matmul.allow_tf32 = True
+                torch.backends.cudnn.allow_tf32 = True
+
+    def output_exists(self):
+        if not os.path.exists(self.path.masked_upscale_image):
+            return False
+        return True
 
     def process(self, text_prompt:str):
         # setup the input image and text prompt for SAM 2 and Grounding DINO
         # VERY important: text queries need to be lowercased + end with a dot
 
+        if self.output_exists():
+            print("SKIP: output already exists")
+            return False
+        
+        if self.grounding_model is None or self.image_predictor is None:
+            self._init_model()
+
         image_source, image = load_image(self.path.upscale_image)
 
-        self.sam2_predictor.set_image(image_source)
+        self.image_predictor.set_image(image_source)
 
         boxes, confidences, labels = predict(
             model=self.grounding_model,
@@ -69,7 +87,7 @@ class ImageSegmentProcessor:
         boxes = boxes * torch.Tensor([w, h, w, h])
         input_boxes = box_convert(boxes=boxes, in_fmt="cxcywh", out_fmt="xyxy").numpy()
 
-        masks, scores, logits = self.sam2_predictor.predict(
+        masks, scores, logits = self.image_predictor.predict(
             point_coords=None,
             point_labels=None,
             box=input_boxes,

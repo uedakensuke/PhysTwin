@@ -9,16 +9,34 @@ from .utils.path import PathResolver
 from .utils.data_reader import ImageReader
 
 class ImageUpscaleProcessor:
-    def __init__(self, raw_path:str, base_path:str , case_name:str, *, controller_name="hand", model_id = "stabilityai/stable-diffusion-x4-upscaler"):
+    def __init__(self, raw_path:str, base_path:str , case_name:str, *, controller_name="hand"):
         self.path = PathResolver(raw_path, base_path, case_name, controller_name=controller_name)
         self.data = ImageReader(self.path)
 
+        self.pipeline = None
+
+    def _init_pipeline(self, model_id = "stabilityai/stable-diffusion-x4-upscaler"):
         # load model and scheduler
-        self.pipeline = StableDiffusionUpscalePipeline.from_pretrained(
-            model_id, torch_dtype=torch.float16
-        ).to("cuda")
+        if self.pipeline is None:
+            self.pipeline = StableDiffusionUpscalePipeline.from_pretrained(
+                model_id, torch_dtype=torch.float16
+            ).to("cuda")
+
+    def output_exists(self, camera_idx:int):
+        # ToDo: Consider if camera_idx is changed
+        if not os.path.exists(self.path.upscale_image):
+            return False
+        return True
 
     def process(self, camera_idx:int, category:str):
+
+        if self.output_exists(camera_idx):
+            print("SKIP: output already exists")
+            return False
+
+        if self.pipeline is None:
+            self._init_pipeline()
+
         output_path = self.path.upscale_image
 
         if os.path.isfile(output_path):

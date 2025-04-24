@@ -15,11 +15,15 @@ import numpy as np
 from .utils.path import PathResolver
 
 class ShapePriorProcessor:
-    def __init__(self, raw_path:str, base_path:str , case_name:str, *, trellis_model="JeffreyXiang/TRELLIS-image-large"):
+    def __init__(self, raw_path:str, base_path:str , case_name:str):
         self.path = PathResolver(raw_path, base_path, case_name)
+        self.pipeline = None
+
+    def _init_pipeline(self, trellis_model="JeffreyXiang/TRELLIS-image-large"):
         # Load a pipeline from a model folder or a Hugging Face model hub.
-        self.pipeline = TrellisImageTo3DPipeline.from_pretrained(trellis_model)
-        self.pipeline.cuda()
+        if self.pipeline is None:
+            self.pipeline = TrellisImageTo3DPipeline.from_pretrained(trellis_model)
+            self.pipeline.cuda()
 
     def output_exists(self):
         if not os.path.exists(self.path.reconstruct_3d_model_glb):
@@ -33,6 +37,9 @@ class ShapePriorProcessor:
         if self.output_exists():
             print("SKIP: output already exists")
             return False
+        
+        if self.pipeline is None:
+            self._init_pipeline()
 
         final_im = Image.open(self.path.masked_upscale_image).convert("RGBA")
         assert not np.all(np.array(final_im)[:, :, 3] == 255)
