@@ -6,7 +6,7 @@ import torch
 from argparse import ArgumentParser
 
 from .utils.path import PathResolver
-from .utils.data import ImageReader
+from .utils.data_reader import ImageReader
 
 class ImageUpscaleProcessor:
     def __init__(self, raw_path:str, base_path:str , case_name:str, *, controller_name="hand", model_id = "stabilityai/stable-diffusion-x4-upscaler"):

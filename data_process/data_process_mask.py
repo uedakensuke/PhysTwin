@@ -11,7 +11,7 @@ from tqdm import tqdm
 import cv2
 
 from .utils.path import PathResolver
-from .utils.data import ImageReader
+from .utils.data_reader import ImageReader
 
 
 def exist_dir(dir):

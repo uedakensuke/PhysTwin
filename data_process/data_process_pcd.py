@@ -12,7 +12,7 @@ import cv2
 from tqdm import tqdm
 
 from .utils.path import PathResolver
-from .utils.data import CameraInfo
+from .utils.data_reader import CameraInfo
 
 DEPTH_MIN=0.2
 DEPTH_MAX=1.5

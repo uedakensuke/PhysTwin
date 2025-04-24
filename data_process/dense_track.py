@@ -8,7 +8,7 @@ import numpy as np
 
 from .utils.visualizer import Visualizer
 from .utils.path import PathResolver
-from .utils.data import ImageReader
+from .utils.data_reader import ImageReader
 
 
 class VideoTrackProcessor:
