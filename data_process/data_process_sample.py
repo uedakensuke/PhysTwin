@@ -242,9 +242,12 @@ class SampleProcessor:
             "object_colors" : object_colors[:, index, :],
             "object_visibilities" : object_visibilities[:, index],
             "object_motions_valid" : object_motions_valid[:, index],
+            "controller_points" : track_data["controller_points"],
+            "controller_mask" : track_data["controller_mask"],
             "surface_points" : np.array(final_surface_points) if self.use_shape_prior else np.zeros((0, 3)),
             "interior_points" : np.array(final_interior_points) if self.use_shape_prior else np.zeros((0, 3)),
         }
+
         return final_track_data
 
 

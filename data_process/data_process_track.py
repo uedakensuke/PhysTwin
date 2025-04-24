@@ -119,7 +119,7 @@ def filter_motion(pre_track_data, neighbor_dist=0.01, *, show_window=False):
     )
     num_points = controller_points.shape[1]
     # Filter all points that disappear in the sequence
-    mask = np.prod(controller_visibilities, axis=0)
+    controller_mask = np.prod(controller_visibilities, axis=0)
 
     y_min, y_max = np.min(controller_points[0, :, 1]), np.max(
         controller_points[0, :, 1]
@@ -140,7 +140,7 @@ def filter_motion(pre_track_data, neighbor_dist=0.01, *, show_window=False):
         kdtree = o3d.geometry.KDTreeFlann(pcd)
         # Get the neighbors for each points and filter motion based on the motion difference between neighbours and the point
         for j in range(num_points):
-            if mask[j] == 0:
+            if controller_mask[j] == 0:
                 controller_motions_valid[i, j] = 0
             if controller_motions_valid[i, j] == 0:
                 continue
@@ -153,18 +153,18 @@ def filter_motion(pre_track_data, neighbor_dist=0.01, *, show_window=False):
             ]
             if len(neighbors) < 5:
                 controller_motions_valid[i, j] = 0
-                mask[j] = 0
+                controller_mask[j] = 0
 
             motion_diff = np.linalg.norm(
                 controller_motions[i, j] - controller_motions[i, neighbors], axis=1
             )
             if (motion_diff < neighbor_dist / 2).sum() < 0.5 * len(neighbors):
                 controller_motions_valid[i, j] = 0
-                mask[j] = 0
+                controller_mask[j] = 0
 
         motion_pcd = o3d.geometry.PointCloud()
         motion_pcd.points = o3d.utility.Vector3dVector(
-            controller_points[i][np.where(mask)]
+            controller_points[i][np.where(controller_mask)]
         )
         motion_pcd.colors = o3d.utility.Vector3dVector(
             controller_colors[i][np.where(controller_motions_valid[i])]
@@ -186,13 +186,13 @@ def filter_motion(pre_track_data, neighbor_dist=0.01, *, show_window=False):
                 vis.poll_events()
                 vis.update_renderer()
 
-    return object_motions_valid, mask
+    return object_motions_valid, controller_mask
 
 
-def get_final_track_data(pre_track_data, object_motions_valid, mask):
+def get_final_track_data(pre_track_data, object_motions_valid, controller_mask):
     controller_points = pre_track_data["controller_points"]
 
-    new_controller_points = controller_points[:, np.where(mask)[0], :]
+    new_controller_points = controller_points[:, np.where(controller_mask)[0], :]
     assert len(new_controller_points[0]) >= 30
     # Do farthest point sampling on the valid controller points to select the final controller points
     valid_indices = np.arange(len(new_controller_points[0]))
@@ -234,7 +234,7 @@ def get_final_track_data(pre_track_data, object_motions_valid, mask):
         "object_colors" : pre_track_data["object_colors"],
         "object_visibilities" : pre_track_data["object_visibilities"],
         "object_motions_valid" : object_motions_valid,
-        "mask":mask,
+        "controller_mask":controller_mask,
         "controller_points":nearest_controller_points,
     }
 
@@ -317,9 +317,9 @@ class PcdTrackProcessor:
         # Filter the track data using the semantic mask of object and controller
         pre_track_data =self._filter_track()
         # Filter motion
-        object_motions_valid, mask = filter_motion(pre_track_data,show_window=self.show_window)
+        object_motions_valid, controller_mask = filter_motion(pre_track_data,show_window=self.show_window)
 
-        track_data = get_final_track_data(pre_track_data, object_motions_valid, mask)
+        track_data = get_final_track_data(pre_track_data, object_motions_valid, controller_mask)
 
         with open(self.path.tarck_process_data_pkl, "wb") as f:
             pickle.dump(track_data, f)
