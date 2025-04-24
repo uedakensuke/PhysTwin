@@ -62,8 +62,8 @@ class PathResolver:
     def find_num_frame(self):
         num_frame = len(glob.glob(f"{self.raw_color_dir}/0/*.png"))
         assert len(glob.glob(f"{self.raw_depth_dir}/0/*.npy")) == num_frame
-        assert len(glob.glob(f"{self.base_mask_dir}/0/0/*.png")) == num_frame
-        assert len(glob.glob(f"{self.base_pcd_dir}/*.npz")) == num_frame
+        assert len(glob.glob(f"{self.base_mask_dir}/0/0/*.png")) in [num_frame,0]
+        assert len(glob.glob(f"{self.base_pcd_dir}/*.npz")) in [num_frame,0]
         return num_frame
 
     def find_object_idx(self, camera_idx:int):
@@ -77,6 +77,32 @@ class PathResolver:
                     raise ValueError("More than one object detected.")
                 obj_idx = int(key)
         return obj_idx
+
+    def exist_mask_frames(self):
+        frames = self.find_num_frame()
+        for camera_idx in range(self.find_num_cam()):
+            for path in glob.glob(f"{self.base_mask_dir}/{camera_idx}/*/"):
+                if frames!=len(glob.glob(os.path.join(path,"*.png"))):
+                    return False
+        return True
+
+    def exist_traking_data(self):
+        for camera_idx in range(self.find_num_cam()):
+            if not os.path.exists(self.get_tracking_data_path(camera_idx)):
+                return False
+        return True
+
+    def exist_pcd_data(self):
+        for frame_idx in range(self.find_num_frame()):
+            if not os.path.exists(self.get_pcd_data_path(frame_idx)):
+                return False
+        return True
+
+    def exist_track_data(self):
+        for frame_idx in range(self.find_num_frame()):
+            if not os.path.exists(self.get_pcd_data_path(frame_idx)):
+                return False
+        return True
 
     def get_color_frame_path(self, camera_idx:int, frame_idx:int):
         return f"{self.raw_color_dir}/{camera_idx}/{frame_idx}.png"

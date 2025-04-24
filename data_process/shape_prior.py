@@ -21,7 +21,19 @@ class ShapePriorProcessor:
         self.pipeline = TrellisImageTo3DPipeline.from_pretrained(trellis_model)
         self.pipeline.cuda()
 
+    def output_exists(self):
+        if not os.path.exists(self.path.reconstruct_3d_model_glb):
+            return False
+        # if not os.path.exists(self.path.reconstruct_3d_model_ply):
+        #     return False
+        return True
+
     def process(self):
+
+        if self.output_exists():
+            print("SKIP: output already exists")
+            return False
+
         final_im = Image.open(self.path.masked_upscale_image).convert("RGBA")
         assert not np.all(np.array(final_im)[:, :, 3] == 255)
 

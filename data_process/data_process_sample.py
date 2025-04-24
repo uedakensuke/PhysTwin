@@ -1,5 +1,6 @@
 # Optionally do the shape completion for the object points (including both suface and interior points)
 # Do the volume sampling for the object points, prioritize the original object points, then surface points, then interior points
+import os
 import pickle
 from argparse import ArgumentParser
 
@@ -37,8 +38,20 @@ class SampleProcessor:
         self.num_surface_points = num_surface_points
         self.volume_sample_size = volume_sample_size
 
+    def output_exists(self):
+        if not os.path.exists(self.path.final_data_pkl):
+            return False
+        return True
+
     def process(self):
-        final_track_data = self._process_unique_points()
+        if self.output_exists():
+            print("SKIP: output already exists")
+            return False
+
+        with open(self.path.tarck_process_data_pkl, "rb") as f:
+            track_data = pickle.load(f)
+
+        final_track_data = self._process_unique_points(track_data)
 
         with open(self.path.final_data_pkl, "wb") as f:
             pickle.dump(final_track_data, f)
@@ -115,7 +128,7 @@ class SampleProcessor:
             frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
             video_writer.write(frame)
 
-    def _calc_object_points_based_on_shape_prior(self):
+    def _sample_object_points_based_on_shape_prior(self, object_points, surface_points, interior_points, min_bound, grid_flag, index):
         final_surface_points = []
         for i in range(surface_points.shape[0]):
             grid_index = tuple(
@@ -140,12 +153,47 @@ class SampleProcessor:
             [final_surface_points, final_interior_points, object_points[0][index]],
             axis=0,
         )
-        return all_points
+        return final_surface_points, final_interior_points, all_points
 
-    def _process_unique_points(self):
-        with open(self.path.tarck_process_data_pkl, "rb") as f:
-            track_data = pickle.load(f)
+    def _make_index(self, object_points, min_bound):
+        index = []
+        grid_flag = {}
+        for i in range(object_points.shape[1]):
+            grid_index = tuple(
+                np.floor((object_points[0, i] - min_bound) / self.volume_sample_size).astype(int)
+            )
+            if grid_index not in grid_flag:
+                grid_flag[grid_index] = 1
+                index.append(i)
+        return index, grid_flag
+    
+    def _render_pcd_video(self, all_points):
+        # Render the final pcd with interior filling as a turntable video
+        all_pcd = o3d.geometry.PointCloud()
+        all_pcd.points = o3d.utility.Vector3dVector(all_points)
+ 
+        vis = o3d.visualization.Visualizer()
+        vis.create_window(visible=False)
+        dummy_frame = np.asarray(vis.capture_screen_float_buffer(do_render=True))
+        height, width, _ = dummy_frame.shape
+        fourcc = cv2.VideoWriter_fourcc(*"avc1")
+        video_writer = cv2.VideoWriter(
+            self.path.final_pcd_video, fourcc, 30, (width, height)
+        )
 
+        vis.add_geometry(all_pcd)
+        view_control = vis.get_view_control()
+        for j in range(360):
+            view_control.rotate(10, 0)
+            vis.poll_events()
+            vis.update_renderer()
+            frame = np.asarray(vis.capture_screen_float_buffer(do_render=True))
+            frame = (frame * 255).astype(np.uint8)
+            frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+            video_writer.write(frame)
+        vis.destroy_window()
+
+    def _process_unique_points(self, track_data):
         # Get the unique index in the object points
         unique_idx = np.unique(
             track_data["object_points"][0],
@@ -178,59 +226,25 @@ class SampleProcessor:
 
         # Do the volume sampling for the object points, prioritize the original object points, then surface points, then interior points
         min_bound = np.min(all_points, axis=0)
-        index = []
-        grid_flag = {}
-        for i in range(object_points.shape[1]):
-            grid_index = tuple(
-                np.floor((object_points[0, i] - min_bound) / self.volume_sample_size).astype(int)
-            )
-            if grid_index not in grid_flag:
-                grid_flag[grid_index] = 1
-                index.append(i)
+        index, grid_flag = self._make_index(object_points, min_bound)
+
         if self.use_shape_prior:
-            all_points = _calc_object_points_based_on_shape_prior()
+            final_surface_points, final_interior_points, all_points = self._sample_object_points_based_on_shape_prior(
+                object_points, surface_points, interior_points, min_bound, grid_flag, index
+            )
         else:
             all_points = object_points[0][index]
 
-        # Render the final pcd with interior filling as a turntable video
-        all_pcd = o3d.geometry.PointCloud()
-        all_pcd.points = o3d.utility.Vector3dVector(all_points)
-        coorindate = o3d.geometry.TriangleMesh.create_coordinate_frame(size=0.1)
+        self._render_pcd_video(all_points)
 
-        vis = o3d.visualization.Visualizer()
-        vis.create_window(visible=False)
-        dummy_frame = np.asarray(vis.capture_screen_float_buffer(do_render=True))
-        height, width, _ = dummy_frame.shape
-        fourcc = cv2.VideoWriter_fourcc(*"avc1")
-        video_writer = cv2.VideoWriter(
-            self.path.final_pcd_video, fourcc, 30, (width, height)
-        )
-
-        vis.add_geometry(all_pcd)
-        # vis.add_geometry(coorindate)
-        view_control = vis.get_view_control()
-        for j in range(360):
-            view_control.rotate(10, 0)
-            vis.poll_events()
-            vis.update_renderer()
-            frame = np.asarray(vis.capture_screen_float_buffer(do_render=True))
-            frame = (frame * 255).astype(np.uint8)
-            frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-            video_writer.write(frame)
-        vis.destroy_window()
-
-        final_track_data = {}
-        final_track_data["object_points"] = object_points[:, index, :]
-        final_track_data["object_colors"] = object_colors[:, index, :]
-        final_track_data["object_visibilities"] = object_visibilities[:, index]
-        final_track_data["object_motions_valid"] = object_motions_valid[:, index]
-        if self.use_shape_prior:
-            final_track_data["surface_points"] = np.array(final_surface_points)
-            final_track_data["interior_points"] = np.array(final_interior_points)
-        else:
-            final_track_data["surface_points"] = np.zeros((0, 3))
-            final_track_data["interior_points"] = np.zeros((0, 3))
-
+        final_track_data = {
+            "object_points" : object_points[:, index, :],
+            "object_colors" : object_colors[:, index, :],
+            "object_visibilities" : object_visibilities[:, index],
+            "object_motions_valid" : object_motions_valid[:, index],
+            "surface_points" : np.array(final_surface_points) if self.use_shape_prior else np.zeros((0, 3)),
+            "interior_points" : np.array(final_interior_points) if self.use_shape_prior else np.zeros((0, 3)),
+        }
         return final_track_data
 
 

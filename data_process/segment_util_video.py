@@ -59,7 +59,18 @@ class VideoSegmentProcessor:
             torch.backends.cuda.matmul.allow_tf32 = True
             torch.backends.cudnn.allow_tf32 = True
 
+    def output_exists(self):
+        if not os.path.exists(self.path.get_mask_info_path()):
+            return False
+        if not self.path.exist_mask_frames():
+            return False
+        return True
+
     def process(self, camera_idx:int, text_prompt:str):
+        if self.output_exists():
+            print("SKIP: output already exists")
+            return False
+
         temp_video_frame_dir = self.path.get_temp_video_frame_dir(camera_idx)
 
         """
@@ -96,6 +107,7 @@ class VideoSegmentProcessor:
         )
 
         os.system(f"rm -rf {temp_video_frame_dir}")
+        return True
 
     def _extruct_frames(self, video_path:str, temp_video_frame_dir:str):
         existDir(temp_video_frame_dir)

@@ -56,7 +56,15 @@ class PcdMaskProcessor:
                     mask_info["controller"] = [int(key)]
         return mask_info
 
+    def output_exists(self):
+        if not os.path.exists(self.path.processed_masks_pkl):
+            return False
+        return True
+
     def process(self):
+        if self.output_exists():
+            print("SKIP: output already exists")
+            return False
 
         if self.show_window:
             vis = o3d.visualization.Visualizer()

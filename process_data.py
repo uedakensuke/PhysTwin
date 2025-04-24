@@ -14,9 +14,10 @@ from data_process.data_process_pcd import PcdEstimateProcessor
 from data_process.data_process_mask import PcdMaskProcessor
 from data_process.data_process_track import PcdTrackProcessor
 from data_process.align import AlignProcessor
+from data_process.data_process_sample import SampleProcessor
+
 
 CONTROLLER_NAME = "hand"
-
 
 def setup_logger(log_file):
     logger = logging.getLogger("GlobalLogger")
@@ -68,14 +69,13 @@ class DataProcessor:
         self.category, self.use_shape_prior = _read_config(raw_path, case_name)
 
     def process(self):
-        # self._process_seg()
-        # if self.use_shape_prior:
-        #     self._process_shape_prior() #実行には_process_segの実行が必要
-        # self._process_track() #実行には_process_segの実行が必要。_process_shape_priorは不要
-        # self._process_3d()
+        self._process_seg()
+        self._process_track()
+        self._process_3d()
         if self.use_shape_prior:
-            self._process_align()
-        # self._process_final()
+            self._process_shape_prior() #実行には_process_segの実行が必要
+            self._process_align() #実行には_process_3dの実行が必要
+        self._process_final()
 
     def _process_seg(self, camera_num = 3):
         assert len(glob.glob(f"{self.raw_path}/{self.case_name}/depth/*")) == camera_num
@@ -167,14 +167,14 @@ class DataProcessor:
     def _process_final(self):
         # Get the final PCD used for the inverse physics with/without the shape prior
         with Timer(self.logger,"Final Data Generation",self.case_name):
-            if self.use_shape_prior:
-                os.system(
-                    f"python ./data_process/data_process_sample.py --base_path {self.base_path} --case_name {self.case_name} --shape_prior"
+            sp = SampleProcessor(
+                self.raw_path,
+                self.base_path,
+                self.case_name,
+                show_window=self.show_window,
+                use_shape_prior=self.use_shape_prior
                 )
-            else:
-                os.system(
-                    f"python ./data_process/data_process_sample.py --base_path {self.base_path} --case_name {self.case_name}"
-                )
+            sp.process()
 
         # Save the train test split
         frame_len = len(glob.glob(f"{self.base_path}/{self.case_name}/pcd/*.npz"))

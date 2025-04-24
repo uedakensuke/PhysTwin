@@ -1,4 +1,3 @@
-import json
 import os
 import pickle
 from argparse import ArgumentParser
@@ -23,7 +22,7 @@ from .utils.align_util import (
 )
 from .models.match_pairs import image_pair_matching
 from .utils.path import PathResolver
-from .utils.data import ImageReader, CameraInfo, trans_points
+from .utils.data_reader import ImageReader, CameraInfo, trans_points
 
 def existDir(dir_path):
     if not os.path.exists(dir_path):
@@ -263,7 +262,16 @@ class AlignProcessor:
                 first_mask = mask
         return np.vstack(obs_points), np.vstack(obs_colors), first_points, first_mask
 
+    def output_exists(self):
+        if not os.path.exists(self.path.final_mesh_glb):
+            return False
+        return True
+
     def process(self):
+        if self.output_exists():
+            print("SKIP: output already exists")
+            return False
+
         output_dir = self.path.base_shape_matching_dir
         existDir(output_dir)
 

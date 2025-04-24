@@ -196,7 +196,16 @@ class PcdEstimateProcessor:
             cameras += camera
         return cameras
 
+    def output_exists(self):
+        if not self.path.exist_pcd_data():
+            return False
+        return True
+
     def process(self):
+        if self.output_exists():
+            print("SKIP: output already exists")
+            return False
+
         if self.show_window:
             vis = o3d.visualization.Visualizer()
             vis.create_window()

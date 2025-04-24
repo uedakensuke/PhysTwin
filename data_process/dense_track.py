@@ -19,7 +19,16 @@ class VideoTrackProcessor:
 
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
 
+    def output_exists(self):
+        if not self.path.exist_traking_data():
+            return False
+        return True
+
     def process(self):
+        if self.output_exists():
+            print("SKIP: output already exists")
+            return False
+
         os.makedirs(self.path.base_cotracker_dir, exist_ok=True)
 
         for i in range(self.num_cam):

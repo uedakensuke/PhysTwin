@@ -23,11 +23,11 @@ def getSphereMesh(center, radius=0.1, color=[0, 0, 0]):
     return sphere
 
 
-def filter_motion(track_data, neighbor_dist=0.01, *, show_window=False):
+def filter_motion(pre_track_data, neighbor_dist=0.01, *, show_window=False):
     # Calculate the motion of each point
-    object_points = track_data["object_points"]
-    object_colors = track_data["object_colors"]
-    object_visibilities = track_data["object_visibilities"]
+    object_points = pre_track_data["object_points"]
+    object_colors = pre_track_data["object_colors"]
+    object_visibilities = pre_track_data["object_visibilities"]
     object_motions = np.zeros_like(object_points)
     object_motions[:-1] = object_points[1:] - object_points[:-1]
     object_motions_valid = np.zeros_like(object_visibilities)
@@ -108,11 +108,9 @@ def filter_motion(track_data, neighbor_dist=0.01, *, show_window=False):
     if show_window:
         vis.destroy_window()
 
-    track_data["object_motions_valid"] = object_motions_valid
-
-    controller_points = track_data["controller_points"]
-    controller_colors = track_data["controller_colors"]
-    controller_visibilities = track_data["controller_visibilities"]
+    controller_points = pre_track_data["controller_points"]
+    controller_colors = pre_track_data["controller_colors"]
+    controller_visibilities = pre_track_data["controller_visibilities"]
     controller_motions = np.zeros_like(controller_points)
     controller_motions[:-1] = controller_points[1:] - controller_points[:-1]
     controller_motions_valid = np.zeros_like(controller_visibilities)
@@ -188,13 +186,11 @@ def filter_motion(track_data, neighbor_dist=0.01, *, show_window=False):
                 vis.poll_events()
                 vis.update_renderer()
 
-    track_data["controller_mask"] = mask
-    return track_data
+    return object_motions_valid, mask
 
 
-def get_final_track_data(track_data):
-    controller_points = track_data["controller_points"]
-    mask = track_data["controller_mask"]
+def get_final_track_data(pre_track_data, object_motions_valid, mask):
+    controller_points = pre_track_data["controller_points"]
 
     new_controller_points = controller_points[:, np.where(mask)[0], :]
     assert len(new_controller_points[0]) >= 30
@@ -233,12 +229,16 @@ def get_final_track_data(track_data):
     # o3d.visualization.draw_geometries([object_pcd])
     # o3d.visualization.draw_geometries([object_pcd] + controller_meshes)
 
-    track_data.pop("controller_points")
-    track_data.pop("controller_colors")
-    track_data.pop("controller_visibilities")
-    track_data["controller_points"] = nearest_controller_points
+    final_track_data = {
+        "object_points" : pre_track_data["object_points"],
+        "object_colors" : pre_track_data["object_colors"],
+        "object_visibilities" : pre_track_data["object_visibilities"],
+        "object_motions_valid" : object_motions_valid,
+        "mask":mask,
+        "controller_points":nearest_controller_points,
+    }
 
-    return track_data
+    return final_track_data
 
 
 def visualize_track(track_data):
@@ -304,19 +304,28 @@ class PcdTrackProcessor:
         self.path = PathResolver(raw_path,base_path,case_name)
         self.show_window = show_window
 
-    def process(self): 
-        # Filter the track data using the semantic mask of object and controller
-        filtered_track_data =self._filter_track()
-        # Filter motion
-        filtered_motion_track_data = filter_motion(filtered_track_data,show_window=self.show_window)
+    def output_exists(self):
+        if not os.path.exists(self.path.tarck_process_data_pkl):
+            return False
+        return True
 
-        final_track_data = get_final_track_data(filtered_motion_track_data)
+    def process(self):
+        if self.output_exists():
+            print("SKIP: output already exists")
+            return False
+
+        # Filter the track data using the semantic mask of object and controller
+        pre_track_data =self._filter_track()
+        # Filter motion
+        object_motions_valid, mask = filter_motion(pre_track_data,show_window=self.show_window)
+
+        track_data = get_final_track_data(pre_track_data, object_motions_valid, mask)
 
         with open(self.path.tarck_process_data_pkl, "wb") as f:
-            pickle.dump(final_track_data, f)
+            pickle.dump(track_data, f)
 
         if self.show_window:
-            visualize_track(final_track_data)
+            visualize_track(track_data)
 
     # Based on the valid mask, filter out the bad tracking data
     def _filter_track(self):
@@ -410,15 +419,15 @@ class PcdTrackProcessor:
         controller_colors = np.concatenate(controller_colors, axis=1)
         controller_visibilities = np.concatenate(controller_visibilities, axis=1)
 
-        track_data = {}
-        track_data["object_points"] = object_points
-        track_data["object_colors"] = object_colors
-        track_data["object_visibilities"] = object_visibilities
-        track_data["controller_points"] = controller_points
-        track_data["controller_colors"] = controller_colors
-        track_data["controller_visibilities"] = controller_visibilities
-
-        return track_data
+        pre_track_data = {
+            "object_points":object_points,
+            "object_colors":object_colors,
+            "object_visibilities":object_visibilities,
+            "controller_points":controller_points,
+            "controller_colors":controller_colors,
+            "controller_visibilities":controller_visibilities
+        }
+        return pre_track_data
 
 
 if __name__ == "__main__":
