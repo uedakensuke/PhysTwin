@@ -17,7 +17,10 @@ class PathResolver:
 
         #### base_path配下
         self.tarck_process_data_pkl = f"{self.base_path}/{self.case_name}/track_process_data.pkl"
-
+        self.final_pcd_video = f"{self.base_path}/{self.case_name}/final_pcd.mp4"
+        self.final_data_video = f"{self.base_path}/{self.case_name}/final_data.mp4"
+        self.final_data_pkl = f"{self.base_path}/{self.case_name}/final_data.pkl"
+        
         #### base_path配下(mask)
         self.base_mask_dir = f"{self.base_path}/{self.case_name}/mask"
         self.processed_masks_pkl = f"{self.base_mask_dir}/processed_masks.pkl"

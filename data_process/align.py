@@ -437,7 +437,7 @@ class AlignProcessor:
             matching_points,
         )
 
-        if self.show_window or self.export_visualize_files:
+        if self.export_visualize_files:
             final_mesh_world.compute_vertex_normals()
 
             # Visualize the partial observation and the mesh
@@ -448,9 +448,8 @@ class AlignProcessor:
             coordinate = o3d.geometry.TriangleMesh.create_coordinate_frame(size=0.1)
 
             # Render the final stuffs as a turntable video
-            if self.show_window:
-                vis = o3d.visualization.Visualizer()
-                vis.create_window(visible=False)
+            vis = o3d.visualization.Visualizer()
+            vis.create_window(visible=self.show_window)
             dummy_frame = np.asarray(vis.capture_screen_float_buffer(do_render=True))
             height, width, _ = dummy_frame.shape
             fourcc = cv2.VideoWriter_fourcc(*"avc1")
@@ -461,23 +460,20 @@ class AlignProcessor:
             # final_mesh_world.translate([0, 0, 0.2])
             # mesh_wireframe = o3d.geometry.LineSet.create_from_triangle_mesh(final_mesh_world)
             # o3d.visualization.draw_geometries([pcd, final_mesh_world], window_name="Matching")
-            if self.show_window:
-                vis.add_geometry(pcd)
-                vis.add_geometry(final_mesh_world)
-                # vis.add_geometry(coordinate)
-                view_control = vis.get_view_control()
+            vis.add_geometry(pcd)
+            vis.add_geometry(final_mesh_world)
+            # vis.add_geometry(coordinate)
+            view_control = vis.get_view_control()
 
             for j in range(360):
-                if self.show_window:
-                    view_control.rotate(10, 0)
-                    vis.poll_events()
-                    vis.update_renderer()
+                view_control.rotate(10, 0)
+                vis.poll_events()
+                vis.update_renderer()
                 frame = np.asarray(vis.capture_screen_float_buffer(do_render=True))
                 frame = (frame * 255).astype(np.uint8)
                 frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
                 video_writer.write(frame)
-            if self.show_window:
-                vis.destroy_window()
+            vis.destroy_window()
 
         mesh.vertices = np.asarray(final_mesh_world.vertices)[trimesh_indices]
         mesh.export(self.path.final_mesh_glb)
