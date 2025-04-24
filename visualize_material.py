@@ -10,8 +10,8 @@ from qqtt.utils import logger, cfg
 import numpy as np
 import torch
 
-from .data_process.utils.path import PathResolver
-from .data_process.utils.data_reader import CameraInfo
+from data_process.utils.path import PathResolver
+from data_process.utils.data_reader import CameraInfo
 
 DIR = os.path.dirname(__file__)
 

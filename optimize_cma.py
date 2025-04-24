@@ -11,8 +11,8 @@ from qqtt.utils.logger import StreamToLogger, logging
 import numpy as np
 import torch
 
-from .data_process.utils.path import PathResolver
-from .data_process.utils.data_reader import CameraInfo
+from data_process.utils.path import PathResolver
+from data_process.utils.data_reader import CameraInfo
 
 DIR = os.path.dirname(__file__)
 
