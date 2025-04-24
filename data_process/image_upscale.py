@@ -1,12 +1,9 @@
 import os
-import json
 
 from PIL import Image
 from diffusers import StableDiffusionUpscalePipeline
 import torch
 from argparse import ArgumentParser
-import cv2
-import numpy as np
 
 from .utils.path import PathResolver
 from .utils.data import ImageReader

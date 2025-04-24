@@ -12,6 +12,7 @@ import cv2
 from tqdm import tqdm
 
 from .utils.path import PathResolver
+from .utils.data import CameraInfo
 
 DEPTH_MIN=0.2
 DEPTH_MAX=1.5
@@ -121,11 +122,7 @@ class PcdEstimateProcessor:
         self.path = PathResolver(raw_path,base_path,case_name)
         self.show_window = show_window
 
-        with open(self.path.camera_metadata, "r") as f:
-            data = json.load(f)
-        self.intrinsics = np.array(data["intrinsics"])
-        self.frame_num = data["frame_num"]
-        self.c2ws = pickle.load(open(self.path.camera_calibrate_pkl, "rb"))
+        self.camera_info = CameraInfo(self.path)
 
     def _get_pcd_from_data(self, frame_idx):
         # 複数のカメラから得られる点群を統合して返します
@@ -140,7 +137,7 @@ class PcdEstimateProcessor:
 
             points = getPcdFromDepth(
                 depth,
-                intrinsic=self.intrinsics[i],
+                intrinsic=self.camera_info.intrinsics[i],
             )
             masks = np.logical_and(points[:, :, 2] > DEPTH_MIN, points[:, :, 2] < DEPTH_MAX)
             points_flat = points.reshape(-1, 3)
@@ -148,7 +145,7 @@ class PcdEstimateProcessor:
             homogeneous_points = np.hstack(
                 (points_flat, np.ones((points_flat.shape[0], 1)))
             )
-            points_world = np.dot(self.c2ws[i], homogeneous_points.T).T[:, :3]
+            points_world = np.dot(self.camera_info.c2ws[i], homogeneous_points.T).T[:, :3]
             points_final = points_world.reshape(points.shape)
             total_points.append(points_final)
             total_colors.append(color)
@@ -186,13 +183,13 @@ class PcdEstimateProcessor:
     def get_cameras(self):
         cameras = []
         # Visualize the cameras
-        for i in range(len(self.intrinsics)):
+        for i in range(len(self.camera_info.intrinsics)):
             camera = getCamera(
-                self.c2ws[i],
-                self.intrinsics[i, 0, 0],
-                self.intrinsics[i, 1, 1],
-                self.intrinsics[i, 0, 2],
-                self.intrinsics[i, 1, 2],
+                self.camera_info.c2ws[i],
+                self.camera_info.intrinsics[i, 0, 0],
+                self.camera_info.intrinsics[i, 1, 1],
+                self.camera_info.intrinsics[i, 0, 2],
+                self.camera_info.intrinsics[i, 1, 2],
                 z_flip=True,
                 scale=0.2,
             )
@@ -209,7 +206,7 @@ class PcdEstimateProcessor:
             vis.add_geometry(coordinate)
 
         exist_dir(self.path.base_pcd_dir)
-        for i in tqdm(range(self.frame_num)):
+        for i in tqdm(range(self.path.find_num_frame())):
             points, colors, masks = self._get_pcd_from_data(i)
 
             if self.show_window:
