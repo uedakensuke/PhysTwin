@@ -21,7 +21,7 @@ from .utils.align_util import (
     plot_image_with_points,
     select_point,
 )
-from .utils.match_pairs import image_pair_matching
+from .models.match_pairs import image_pair_matching
 from .utils.path import PathResolver
 from .utils.data import ImageReader, CameraInfo, trans_points
 

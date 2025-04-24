@@ -52,8 +52,8 @@ import sys
 import os
 
 sys.path.append(os.getcwd())
-from models.matching import Matching
-from models.utils import (
+from .matching import Matching
+from .utils import (
     make_matching_plot,
     AverageTimer,
     read_image,
