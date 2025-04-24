@@ -1,14 +1,16 @@
-from qqtt import InvPhyTrainerWarp
-from qqtt.utils import logger, cfg
-from datetime import datetime
 import random
-import numpy as np
-import torch
 from argparse import ArgumentParser
 import glob
 import os
 import pickle
-import json
+
+from qqtt import InvPhyTrainerWarp
+from qqtt.utils import logger, cfg
+import numpy as np
+import torch
+
+from .data_process.utils.path import PathResolver
+from .data_process.utils.data_reader import CameraInfo
 
 DIR = os.path.dirname(__file__)
 
@@ -27,6 +29,7 @@ set_all_seeds(seed)
 
 if __name__ == "__main__":
     parser = ArgumentParser()
+    parser.add_argument("--raw_path", type=str, default=None)
     parser.add_argument("--base_path", type=str, required=True)
     parser.add_argument("--physics_sparse_path", type=str, required=True)
     parser.add_argument("--physics_dense_path", type=str, required=True)
@@ -34,7 +37,9 @@ if __name__ == "__main__":
     parser.add_argument("--case_name", type=str, required=True)
     args = parser.parse_args()
 
-    base_path = args.base_path
+    if args.raw_path is None:
+        args.raw_path = args.base_path
+
     physics_sparse_path = args.physics_sparse_path
     physics_dense_path = args.physics_dense_path
     inference_path = args.inference_path
@@ -61,20 +66,17 @@ if __name__ == "__main__":
     cfg.set_optimal_params(optimal_params)
 
     # Set the intrinsic and extrinsic parameters for visualization
-    with open(f"{base_path}/{case_name}/calibrate.pkl", "rb") as f:
-        c2ws = pickle.load(f)
-    w2cs = [np.linalg.inv(c2w) for c2w in c2ws]
-    cfg.c2ws = np.array(c2ws)
-    cfg.w2cs = np.array(w2cs)
-    with open(f"{base_path}/{case_name}/metadata.json", "r") as f:
-        data = json.load(f)
-    cfg.intrinsics = np.array(data["intrinsics"])
-    cfg.WH = data["WH"]
-    cfg.overlay_path = f"{base_path}/{case_name}/color"
+    path_resolver = PathResolver(args.raw_path, args.base_path, args.case_name)
+    camera_info = CameraInfo(path_resolver)
+    cfg.c2ws = camera_info.c2ws
+    cfg.w2cs = camera_info.w2cs
+    cfg.intrinsics = camera_info.intrinsics
+    cfg.WH = camera_info.WH
+    cfg.overlay_path = path_resolver.get_color_dir()
 
     logger.set_log_file(path=out_dir, name="inference_log")
     trainer = InvPhyTrainerWarp(
-        data_path=f"{base_path}/{case_name}/final_data.pkl",
+        data_path=path_resolver.final_data_pkl,
         base_dir=out_dir,
         pure_inference_mode=True,
     )
