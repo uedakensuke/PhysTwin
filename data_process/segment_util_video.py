@@ -1,17 +1,14 @@
 import os
 import json
 from argparse import ArgumentParser
-from pathlib import Path
 from tqdm import tqdm
 
-import cv2
 import torch
 import numpy as np
 import supervision as sv
 from torchvision.ops import box_convert
 from PIL import Image
-from sam2.build_sam import build_sam2_video_predictor, build_sam2
-from sam2.sam2_image_predictor import SAM2ImagePredictor
+from sam2.build_sam import build_sam2_video_predictor
 from groundingdino.util.inference import load_model, load_image, predict
 
 from .utils.path import PathResolver
