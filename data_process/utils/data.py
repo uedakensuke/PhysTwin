@@ -47,12 +47,12 @@ class ImageReader:
         )
         center = (bbox[0] + bbox[2]) / 2, (bbox[1] + bbox[3]) / 2
         size = max(bbox[2] - bbox[0], bbox[3] - bbox[1])
-        size_margin = int(size * 1.2)
+        size_margin = size * 1.2
         bbox_margin = (
-            center[0] - size_margin // 2,
-            center[1] - size_margin // 2,
-            center[0] + size_margin // 2,
-            center[1] + size_margin // 2
+            int(center[0] - size_margin / 2),
+            int(center[1] - size_margin / 2),
+            int(center[0] + size_margin / 2),
+            int(center[1] + size_margin / 2)
         )
 
         # Make sure the bounding box is within the image
