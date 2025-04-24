@@ -28,21 +28,15 @@ try:
 except:
     SPARSE_ADAM_AVAILABLE = False
 
-import numpy as np
-from kornia import create_meshgrid
 import copy
 from gs_render import (
     remove_gaussians_with_mask,
     remove_gaussians_with_low_opacity,
-    remove_gaussians_with_point_mesh_distance,
 )
 from gaussian_splatting.dynamic_utils import (
     interpolate_motions,
-    create_relation_matrix,
     knn_weights,
     get_topk_indices,
-    quat2mat,
-    mat2quat,
 )
 import pickle
 

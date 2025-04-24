@@ -93,10 +93,11 @@ class CameraInfo:
         with open(path_resolver.camera_metadata, "r") as f:
             data = json.load(f)
         self.intrinsics = np.array(data["intrinsics"])
+        self.WH = data["WH"]
 
         # Load the c2w for the camera
         with open(path_resolver.camera_calibrate_pkl, "rb") as f:
-            self.c2ws = pickle.load(f)
+            self.c2ws = np.asarray(pickle.load(f))
             self.w2cs = [np.linalg.inv(c2w) for c2w in self.c2ws]
 
     def calc_fov_horizontal(self, raw_img, camera_idx=0):
