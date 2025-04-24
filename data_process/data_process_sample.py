@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import trimesh
 import cv2
 
-from utils.align_util import as_mesh
+from .utils.align_util import as_mesh
 from .utils.path import PathResolver
 
 
