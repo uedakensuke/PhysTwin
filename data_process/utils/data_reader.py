@@ -90,13 +90,13 @@ def trans_points(mat, points):
 class CameraInfo:
     def __init__(self, path_resolver:PathResolver):
         # Load the metadata
-        with open(path_resolver.camera_metadata, "r") as f:
+        with open(path_resolver.get_camera_metadata_path(), "r") as f:
             data = json.load(f)
         self.intrinsics = np.array(data["intrinsics"])
         self.WH = data["WH"]
 
         # Load the c2w for the camera
-        with open(path_resolver.camera_calibrate_pkl, "rb") as f:
+        with open(path_resolver.get_camera_calibrate_pkl_path(), "rb") as f:
             self.c2ws = np.asarray(pickle.load(f))
             self.w2cs = [np.linalg.inv(c2w) for c2w in self.c2ws]
 

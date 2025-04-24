@@ -78,7 +78,7 @@ if __name__ == "__main__":
     cfg.w2cs = camera_info.w2cs
     cfg.intrinsics = camera_info.intrinsics
     cfg.WH = camera_info.WH
-    cfg.overlay_path = path_resolver.raw_color_dir
+    cfg.overlay_path = path_resolver.get_color_dir()
 
     logger.set_log_file(path=base_dir, name="inv_phy_log")
     trainer = InvPhyTrainerWarp(
