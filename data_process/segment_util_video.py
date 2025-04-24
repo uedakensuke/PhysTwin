@@ -59,15 +59,15 @@ class VideoSegmentProcessor:
             torch.backends.cuda.matmul.allow_tf32 = True
             torch.backends.cudnn.allow_tf32 = True
 
-    def output_exists(self):
-        if not os.path.exists(self.path.get_mask_info_path()):
+    def output_exists(self,camera_idx:int,):
+        if not os.path.exists(self.path.get_mask_info_path(camera_idx)):
             return False
-        if not self.path.exist_mask_frames():
+        if not self.path.exist_mask_frames(camera_idx):
             return False
         return True
 
     def process(self, camera_idx:int, text_prompt:str):
-        if self.output_exists():
+        if self.output_exists(camera_idx):
             print("SKIP: output already exists")
             return False
 

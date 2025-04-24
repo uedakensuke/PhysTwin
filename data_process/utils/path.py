@@ -78,9 +78,14 @@ class PathResolver:
                 obj_idx = int(key)
         return obj_idx
 
-    def exist_mask_frames(self):
+    def exist_mask_frames(self, camera_idx:int|None=None):
         frames = self.find_num_frame()
-        for camera_idx in range(self.find_num_cam()):
+        if camera_idx is None:
+            for _camera_idx in range(self.find_num_cam()):
+                for path in glob.glob(f"{self.base_mask_dir}/{_camera_idx}/*/"):
+                    if frames!=len(glob.glob(os.path.join(path,"*.png"))):
+                        return False
+        else:
             for path in glob.glob(f"{self.base_mask_dir}/{camera_idx}/*/"):
                 if frames!=len(glob.glob(os.path.join(path,"*.png"))):
                     return False
